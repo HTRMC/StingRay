@@ -5,28 +5,28 @@ const write_color = @import("color.zig").write_color;
 const Ray = @import("ray.zig").Ray;
 
 fn hit_sphere(center: Vec3, radius: f32, ray: Ray) f32 {
-    const oc = center.sub(ray.origin());
-    const a = ray.direction().dot(ray.direction());
-    const b = -2.0 * ray.direction().dot(oc);
-    const c = oc.dot(oc) - radius * radius;
-    const discriminant = b * b - 4 * a * c;
+    const origin_to_center = center.sub(ray.origin());
+    const quadratic_a = ray.direction().dot(ray.direction());
+    const quadratic_b = -2.0 * ray.direction().dot(origin_to_center);
+    const quadratic_c = origin_to_center.dot(origin_to_center) - radius * radius;
+    const discriminant = quadratic_b * quadratic_b - 4 * quadratic_a * quadratic_c;
     if (discriminant < 0) {
         return -1.0;
     } else {
-        return (-b - @sqrt(discriminant)) / (2.0 * a);
+        return (-quadratic_b - @sqrt(discriminant)) / (2.0 * quadratic_a);
     }
 }
 
 fn ray_color(ray: Ray) Color {
-    const t = hit_sphere(Vec3.init(0, 0, -1), 0.5, ray);
-    if (t > 0.0) {
-        const N = ray.at(t).sub(Vec3.init(0, 0, -1)).normalize();
-        return Color.init(N.x + 1, N.y + 1, N.z + 1).scale(0.5);
+    const hit_t = hit_sphere(Vec3.init(0, 0, -1), 0.5, ray);
+    if (hit_t > 0.0) {
+        const normal = ray.at(hit_t).sub(Vec3.init(0, 0, -1)).normalize();
+        return Color.init(normal.x + 1, normal.y + 1, normal.z + 1).scale(0.5);
     }
 
     const unit_direction = ray.direction().normalize();
-    const a = 0.5 * (unit_direction.y + 1.0);
-    return Color.init(1.0, 1.0, 1.0).scale(1.0 - a).add(Color.init(0.5, 0.7, 1.0).scale(a));
+    const blend = 0.5 * (unit_direction.y + 1.0);
+    return Color.init(1.0, 1.0, 1.0).scale(1.0 - blend).add(Color.init(0.5, 0.7, 1.0).scale(blend));
 }
 
 pub fn main(init: std.process.Init) !void {
