@@ -3,25 +3,16 @@ const Color = @import("color.zig").Color;
 const Vec3 = @import("color.zig").Vec3;
 const write_color = @import("color.zig").write_color;
 const Ray = @import("ray.zig").Ray;
+const Sphere = @import("sphere.zig").Sphere;
+const Hittable = @import("hittable.zig").Hittable;
+const HitRecord = @import("hittable.zig").HitRecord;
+const HittableList = @import("hittable_list.zig").HittableList;
+const rtw = @import("rtweekend.zig");
 
-fn hit_sphere(center: Vec3, radius: f32, ray: Ray) f32 {
-    const origin_to_center = center.sub(ray.origin());
-    const quadratic_a = ray.direction().dot(ray.direction());
-    const half_b = ray.direction().dot(origin_to_center);
-    const quadratic_c = origin_to_center.dot(origin_to_center) - radius * radius;
-    const discriminant = half_b * half_b - quadratic_a * quadratic_c;
-    if (discriminant < 0) {
-        return -1.0;
-    } else {
-        return (half_b - @sqrt(discriminant)) / quadratic_a;
-    }
-}
-
-fn ray_color(ray: Ray) Color {
-    const hit_t = hit_sphere(Vec3.init(0, 0, -1), 0.5, ray);
-    if (hit_t > 0.0) {
-        const normal = ray.at(hit_t).sub(Vec3.init(0, 0, -1)).normalize();
-        return Color.init(normal.x + 1, normal.y + 1, normal.z + 1).scale(0.5);
+fn ray_color(ray: Ray, world: HittableList) Color {
+    var record: HitRecord = undefined;
+    if (world.hit(ray, 0, rtw.infinity, &record)) {
+        return Color.init(record.normal.x + 1, record.normal.y + 1, record.normal.z + 1).scale(0.5);
     }
 
     const unit_direction = ray.direction().normalize();
@@ -41,6 +32,11 @@ pub fn main(init: std.process.Init) !void {
     const image_width_f: f32 = @floatFromInt(image_width);
     const image_height: u32 = @max(1, @as(u32, @intFromFloat(image_width_f / aspect_ratio)));
     const image_height_f: f32 = @floatFromInt(image_height);
+
+    var world = HittableList.init(std.heap.page_allocator);
+    defer world.deinit();
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 0, -1), 0.5) });
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -100.5, -1), 100) });
 
     const focal_length: f32 = 1.0;
     const viewport_height: f32 = 2.0;
@@ -62,6 +58,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("P3\n{} {}\n255\n", .{ image_width, image_height });
 
     for (0..image_height) |j| {
+        try stderr.print("\rScanlines remaining: {} ", .{image_height - j});
         const fj: f32 = @floatFromInt(j);
         for (0..image_width) |i| {
             const fi: f32 = @floatFromInt(i);
@@ -71,7 +68,7 @@ pub fn main(init: std.process.Init) !void {
             const ray_direction = pixel_center.sub(camera_center);
             const r = Ray.init(camera_center, ray_direction);
 
-            const pixel_color = ray_color(r);
+            const pixel_color = ray_color(r, world);
             try write_color(stdout, pixel_color);
         }
     }
