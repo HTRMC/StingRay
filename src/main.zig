@@ -7,13 +7,13 @@ const Ray = @import("ray.zig").Ray;
 fn hit_sphere(center: Vec3, radius: f32, ray: Ray) f32 {
     const origin_to_center = center.sub(ray.origin());
     const quadratic_a = ray.direction().dot(ray.direction());
-    const quadratic_b = -2.0 * ray.direction().dot(origin_to_center);
+    const half_b = ray.direction().dot(origin_to_center);
     const quadratic_c = origin_to_center.dot(origin_to_center) - radius * radius;
-    const discriminant = quadratic_b * quadratic_b - 4 * quadratic_a * quadratic_c;
+    const discriminant = half_b * half_b - quadratic_a * quadratic_c;
     if (discriminant < 0) {
         return -1.0;
     } else {
-        return (-quadratic_b - @sqrt(discriminant)) / (2.0 * quadratic_a);
+        return (half_b - @sqrt(discriminant)) / quadratic_a;
     }
 }
 
