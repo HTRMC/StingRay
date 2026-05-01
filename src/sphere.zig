@@ -29,7 +29,8 @@ pub const Sphere = struct {
 
         record.hit_t = root;
         record.point = ray.at(root);
-        record.normal = record.point.sub(self.center).scale(1.0 / self.radius);
+        const outward_normal = record.point.sub(self.center).scale(1.0 / self.radius);
+        record.setFaceNormal(ray, outward_normal);
         return true;
     }
 };
