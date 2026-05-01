@@ -1,7 +1,14 @@
 const std = @import("std");
-const color = @import("color.zig");
-const Color = color.Color;
-const write_color = color.write_color;
+const Color = @import("color.zig").Color;
+const Vec3 = @import("color.zig").Vec3;
+const write_color = @import("color.zig").write_color;
+const Ray = @import("ray.zig").Ray;
+
+fn ray_color(ray: Ray) Color {
+    const unit_direction = ray.direction().normalize();
+    const a = 0.5 * (unit_direction.y + 1.0);
+    return Color.init(1.0, 1.0, 1.0).scale(1.0 - a).add(Color.init(0.5, 0.7, 1.0).scale(a));
+}
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -10,21 +17,42 @@ pub fn main(init: std.process.Init) !void {
     var stderr_writer = std.Io.File.stderr().writer(io, &.{});
     const stderr = &stderr_writer.interface;
 
-    const image_width: u16 = 256;
-    const image_height: u16 = 256;
+    const aspect_ratio: f32 = 16.0 / 9.0;
+    const image_width: u32 = 400;
+    const image_width_f: f32 = @floatFromInt(image_width);
+    const image_height: u32 = @max(1, @as(u32, @intFromFloat(image_width_f / aspect_ratio)));
+    const image_height_f: f32 = @floatFromInt(image_height);
+
+    const focal_length: f32 = 1.0;
+    const viewport_height: f32 = 2.0;
+    const viewport_width: f32 = viewport_height * (image_width_f / image_height_f);
+    const camera_center = Vec3.init(0, 0, 0);
+
+    const viewport_u = Vec3.init(viewport_width, 0, 0);
+    const viewport_v = Vec3.init(0, -viewport_height, 0);
+
+    const pixel_delta_u = viewport_u.scale(1.0 / image_width_f);
+    const pixel_delta_v = viewport_v.scale(1.0 / image_height_f);
+
+    const viewport_upper_left = camera_center
+        .sub(Vec3.init(0, 0, focal_length))
+        .sub(viewport_u.scale(0.5))
+        .sub(viewport_v.scale(0.5));
+    const pixel00_loc = viewport_upper_left.add(pixel_delta_u.add(pixel_delta_v).scale(0.5));
 
     try stdout.print("P3\n{} {}\n255\n", .{ image_width, image_height });
 
     for (0..image_height) |j| {
-        try stderr.print("\rScanlines remaining: {}", .{image_height - j});
+        const fj: f32 = @floatFromInt(j);
         for (0..image_width) |i| {
             const fi: f32 = @floatFromInt(i);
-            const fj: f32 = @floatFromInt(j);
-            const pixel_color = Color.init(
-                fi / @as(f32, image_width - 1),
-                fj / @as(f32, image_height - 1),
-                0.0,
-            );
+            const pixel_center = pixel00_loc
+                .add(pixel_delta_u.scale(fi))
+                .add(pixel_delta_v.scale(fj));
+            const ray_direction = pixel_center.sub(camera_center);
+            const r = Ray.init(camera_center, ray_direction);
+
+            const pixel_color = ray_color(r);
             try write_color(stdout, pixel_color);
         }
     }
