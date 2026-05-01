@@ -3,6 +3,7 @@ const Ray = @import("ray.zig").Ray;
 const hittable_mod = @import("hittable.zig");
 const Hittable = hittable_mod.Hittable;
 const HitRecord = hittable_mod.HitRecord;
+const Interval = @import("interval.zig").Interval;
 
 pub const HittableList = struct {
     allocator: std.mem.Allocator,
@@ -24,13 +25,13 @@ pub const HittableList = struct {
         try self.objects.append(self.allocator, object);
     }
 
-    pub fn hit(self: HittableList, ray: Ray, ray_tmin: f32, ray_tmax: f32, record: *HitRecord) bool {
+    pub fn hit(self: HittableList, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
         var temp_record: HitRecord = undefined;
         var hit_anything = false;
-        var closest_so_far = ray_tmax;
+        var closest_so_far = ray_t.max;
 
         for (self.objects.items) |object| {
-            if (object.hit(ray, ray_tmin, closest_so_far, &temp_record)) {
+            if (object.hit(ray, Interval.init(ray_t.min, closest_so_far), &temp_record)) {
                 hit_anything = true;
                 closest_so_far = temp_record.hit_t;
                 record.* = temp_record;

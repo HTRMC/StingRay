@@ -1,5 +1,6 @@
 const Vec3 = @import("color.zig").Vec3;
 const Ray = @import("ray.zig").Ray;
+const Interval = @import("interval.zig").Interval;
 const Sphere = @import("sphere.zig").Sphere;
 
 pub const HitRecord = struct {
@@ -17,9 +18,9 @@ pub const HitRecord = struct {
 pub const Hittable = union(enum) {
     sphere: Sphere,
 
-    pub fn hit(self: Hittable, ray: Ray, ray_tmin: f32, ray_tmax: f32, record: *HitRecord) bool {
+    pub fn hit(self: Hittable, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
         return switch (self) {
-            inline else => |obj| obj.hit(ray, ray_tmin, ray_tmax, record),
+            inline else => |obj| obj.hit(ray, ray_t, record),
         };
     }
 };
