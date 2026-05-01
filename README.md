@@ -4,7 +4,7 @@
 
 Linear algebra via [zlm](https://github.com/HTRMC/zlm).
 
-<img width="256" height="256" alt="Current output" src="https://github.com/user-attachments/assets/177de49d-e1aa-49b6-9a4d-51d60584c9db" />
+<img width="400" height="225" alt="Current output" src="https://github.com/user-attachments/assets/c2c4ceeb-7748-40e7-a91a-bd4ab199ecdb" />
 
 ## Build
 
