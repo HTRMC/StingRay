@@ -4,7 +4,19 @@ const Vec3 = @import("color.zig").Vec3;
 const write_color = @import("color.zig").write_color;
 const Ray = @import("ray.zig").Ray;
 
+fn hit_sphere(center: Vec3, radius: f32, ray: Ray) bool {
+    const oc = center.sub(ray.origin());
+    const a = ray.direction().dot(ray.direction());
+    const b = -2.0 * ray.direction().dot(oc);
+    const c = oc.dot(oc) - radius * radius;
+    const discriminant = b * b - 4 * a * c;
+    return discriminant >= 0;
+}
+
 fn ray_color(ray: Ray) Color {
+    if (hit_sphere(Vec3.init(0, 0, -1), 0.5, ray))
+        return Color.init(1, 0, 0);
+
     const unit_direction = ray.direction().normalize();
     const a = 0.5 * (unit_direction.y + 1.0);
     return Color.init(1.0, 1.0, 1.0).scale(1.0 - a).add(Color.init(0.5, 0.7, 1.0).scale(a));
