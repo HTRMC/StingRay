@@ -85,10 +85,10 @@ pub const Camera = struct {
     }
 
     fn rayColor(self: *const Camera, ray: Ray, world: HittableList) Color {
-        _ = self;
         var record: HitRecord = undefined;
         if (world.hit(ray, Interval.init(0, std.math.inf(f32)), &record)) {
-            return Color.init(record.normal.x + 1, record.normal.y + 1, record.normal.z + 1).scale(0.5);
+            const bounce_direction = random.onHemisphere(record.normal);
+            return self.rayColor(Ray.init(record.point, bounce_direction), world).scale(0.5);
         }
         const unit_direction = ray.direction().normalize();
         const blend = 0.5 * (unit_direction.y + 1.0);

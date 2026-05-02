@@ -1,4 +1,5 @@
 const std = @import("std");
+const Vec3 = @import("color.zig").Vec3;
 
 var prng: std.Random.DefaultPrng = .init(0);
 
@@ -8,4 +9,28 @@ pub fn float() f32 {
 
 pub fn floatRange(min: f32, max: f32) f32 {
     return min + (max - min) * float();
+}
+
+pub fn vec() Vec3 {
+    return Vec3.init(float(), float(), float());
+}
+
+pub fn vecRange(min: f32, max: f32) Vec3 {
+    return Vec3.init(floatRange(min, max), floatRange(min, max), floatRange(min, max));
+}
+
+pub fn unitVector() Vec3 {
+    while (true) {
+        const candidate = vecRange(-1, 1);
+        const len_sq = candidate.dot(candidate);
+        if (1e-30 < len_sq and len_sq <= 1) {
+            return candidate.scale(1.0 / @sqrt(len_sq));
+        }
+    }
+}
+
+pub fn onHemisphere(normal: Vec3) Vec3 {
+    const on_unit_sphere = unitVector();
+    if (on_unit_sphere.dot(normal) > 0.0) return on_unit_sphere;
+    return on_unit_sphere.scale(-1.0);
 }
