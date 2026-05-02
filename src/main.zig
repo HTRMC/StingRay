@@ -6,7 +6,9 @@ const Sphere = @import("sphere.zig").Sphere;
 const Hittable = @import("hittable.zig").Hittable;
 const HittableList = @import("hittable_list.zig").HittableList;
 const Camera = @import("camera.zig").Camera;
-const Material = @import("material.zig").Material;
+const material_mod = @import("material.zig");
+const Material = material_mod.Material;
+const Metal = material_mod.Metal;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -20,8 +22,8 @@ pub fn main(init: std.process.Init) !void {
 
     const material_ground: Material = .{ .lambertian = .{ .albedo = Color.init(0.8, 0.8, 0.0) } };
     const material_center: Material = .{ .lambertian = .{ .albedo = Color.init(0.1, 0.2, 0.5) } };
-    const material_left: Material = .{ .metal = .{ .albedo = Color.init(0.8, 0.8, 0.8) } };
-    const material_right: Material = .{ .metal = .{ .albedo = Color.init(0.8, 0.6, 0.2) } };
+    const material_left: Material = .{ .metal = Metal.init(Color.init(0.8, 0.8, 0.8), 0.3) };
+    const material_right: Material = .{ .metal = Metal.init(Color.init(0.8, 0.6, 0.2), 1.0) };
 
     try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -100.5, -1), 100, material_ground) });
     try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 0, -1.2), 0.5, material_center) });
