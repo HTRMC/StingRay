@@ -9,6 +9,7 @@ const Camera = @import("camera.zig").Camera;
 const material_mod = @import("material.zig");
 const Material = material_mod.Material;
 const Metal = material_mod.Metal;
+const random = @import("random.zig");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -20,29 +21,53 @@ pub fn main(init: std.process.Init) !void {
     var world = HittableList.init(std.heap.page_allocator);
     defer world.deinit();
 
-    const material_ground: Material = .{ .lambertian = .{ .albedo = Color.init(0.8, 0.8, 0.0) } };
-    const material_center: Material = .{ .lambertian = .{ .albedo = Color.init(0.1, 0.2, 0.5) } };
-    const material_left: Material = .{ .dielectric = .{ .refraction_index = 1.5 } };
-    const material_bubble: Material = .{ .dielectric = .{ .refraction_index = 1.0 / 1.5 } };
-    const material_right: Material = .{ .metal = Metal.init(Color.init(0.8, 0.6, 0.2), 1.0) };
+    const ground_material: Material = .{ .lambertian = .{ .albedo = Color.init(0.5, 0.5, 0.5) } };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -1000, 0), 1000, ground_material) });
 
-    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -100.5, -1), 100, material_ground) });
-    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 0, -1.2), 0.5, material_center) });
-    try world.add(.{ .sphere = Sphere.init(Vec3.init(-1, 0, -1), 0.5, material_left) });
-    try world.add(.{ .sphere = Sphere.init(Vec3.init(-1, 0, -1), 0.4, material_bubble) });
-    try world.add(.{ .sphere = Sphere.init(Vec3.init(1, 0, -1), 0.5, material_right) });
+    var a: i32 = -11;
+    while (a < 11) : (a += 1) {
+        var b: i32 = -11;
+        while (b < 11) : (b += 1) {
+            const choose_mat = random.float();
+            const af: f32 = @floatFromInt(a);
+            const bf: f32 = @floatFromInt(b);
+            const center = Vec3.init(af + 0.9 * random.float(), 0.2, bf + 0.9 * random.float());
+
+            if (center.sub(Vec3.init(4, 0.2, 0)).length() <= 0.9) continue;
+
+            const sphere_material: Material = if (choose_mat < 0.8) blk: {
+                const albedo = color_mod.hadamard(random.vec(), random.vec());
+                break :blk .{ .lambertian = .{ .albedo = albedo } };
+            } else if (choose_mat < 0.95) blk: {
+                const albedo = random.vecRange(0.5, 1);
+                const fuzz = random.floatRange(0, 0.5);
+                break :blk .{ .metal = Metal.init(albedo, fuzz) };
+            } else .{ .dielectric = .{ .refraction_index = 1.5 } };
+
+            try world.add(.{ .sphere = Sphere.init(center, 0.2, sphere_material) });
+        }
+    }
+
+    const material1: Material = .{ .dielectric = .{ .refraction_index = 1.5 } };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 1, 0), 1.0, material1) });
+
+    const material2: Material = .{ .lambertian = .{ .albedo = Color.init(0.4, 0.2, 0.1) } };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(-4, 1, 0), 1.0, material2) });
+
+    const material3: Material = .{ .metal = Metal.init(Color.init(0.7, 0.6, 0.5), 0.0) };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(4, 1, 0), 1.0, material3) });
 
     var cam: Camera = .{};
     cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 400;
-    cam.samples_per_pixel = 100;
+    cam.image_width = 1200;
+    cam.samples_per_pixel = 500;
     cam.max_depth = 50;
     cam.vfov = 20;
-    cam.lookfrom = Vec3.init(-2, 2, 1);
-    cam.lookat = Vec3.init(0, 0, -1);
+    cam.lookfrom = Vec3.init(13, 2, 3);
+    cam.lookat = Vec3.init(0, 0, 0);
     cam.vup = Vec3.init(0, 1, 0);
-    cam.defocus_angle = 10.0;
-    cam.focus_dist = 3.4;
+    cam.defocus_angle = 0.6;
+    cam.focus_dist = 10.0;
 
     try cam.render(world, stdout, stderr);
 }
