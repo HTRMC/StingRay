@@ -1,8 +1,16 @@
 const Ray = @import("ray.zig").Ray;
 const color_mod = @import("color.zig");
 const Color = color_mod.Color;
+const Vec3 = color_mod.Vec3;
 const HitRecord = @import("hittable.zig").HitRecord;
 const random = @import("random.zig");
+
+fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) Vec3 {
+    const cos_theta = @min(uv.scale(-1.0).dot(n), 1.0);
+    const r_out_perp = uv.add(n.scale(cos_theta)).scale(etai_over_etat);
+    const r_out_parallel = n.scale(-@sqrt(@abs(1.0 - r_out_perp.dot(r_out_perp))));
+    return r_out_perp.add(r_out_parallel);
+}
 
 pub const Lambertian = struct {
     albedo: Color,
@@ -46,10 +54,30 @@ pub const Metal = struct {
     }
 };
 
+pub const Dielectric = struct {
+    refraction_index: f32,
+
+    pub fn scatter(
+        self: Dielectric,
+        ray_in: Ray,
+        record: HitRecord,
+        attenuation: *Color,
+        scattered: *Ray,
+    ) bool {
+        attenuation.* = Color.init(1.0, 1.0, 1.0);
+        const ri = if (record.front_face) 1.0 / self.refraction_index else self.refraction_index;
+        const unit_direction = ray_in.direction().normalize();
+        const refracted = refract(unit_direction, record.normal, ri);
+        scattered.* = Ray.init(record.point, refracted);
+        return true;
+    }
+};
+
 pub const Material = union(enum) {
     none: void,
     lambertian: Lambertian,
     metal: Metal,
+    dielectric: Dielectric,
 
     pub fn scatter(
         self: Material,
