@@ -90,7 +90,7 @@ pub const Camera = struct {
 
         var record: HitRecord = undefined;
         if (world.hit(ray, Interval.init(0.001, std.math.inf(f32)), &record)) {
-            const bounce_direction = random.onHemisphere(record.normal);
+            const bounce_direction = record.normal.add(random.unitVector());
             return self.rayColor(Ray.init(record.point, bounce_direction), depth - 1, world).scale(0.5);
         }
         const unit_direction = ray.direction().normalize();
