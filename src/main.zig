@@ -17,9 +17,16 @@ pub fn main(init: std.process.Init) !void {
 
     var world = HittableList.init(std.heap.page_allocator);
     defer world.deinit();
-    const placeholder: Material = .{ .lambertian = .{ .albedo = Color.init(0.5, 0.5, 0.5) } };
-    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 0, -1), 0.5, placeholder) });
-    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -100.5, -1), 100, placeholder) });
+
+    const material_ground: Material = .{ .lambertian = .{ .albedo = Color.init(0.8, 0.8, 0.0) } };
+    const material_center: Material = .{ .lambertian = .{ .albedo = Color.init(0.1, 0.2, 0.5) } };
+    const material_left: Material = .{ .metal = .{ .albedo = Color.init(0.8, 0.8, 0.8) } };
+    const material_right: Material = .{ .metal = .{ .albedo = Color.init(0.8, 0.6, 0.2) } };
+
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -100.5, -1), 100, material_ground) });
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 0, -1.2), 0.5, material_center) });
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(-1, 0, -1), 0.5, material_left) });
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(1, 0, -1), 0.5, material_right) });
 
     var cam: Camera = .{};
     cam.aspect_ratio = 16.0 / 9.0;
