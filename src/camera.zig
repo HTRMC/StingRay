@@ -18,6 +18,8 @@ pub const Camera = struct {
     lookfrom: Vec3 = Vec3.init(0, 0, 0),
     lookat: Vec3 = Vec3.init(0, 0, -1),
     vup: Vec3 = Vec3.init(0, 1, 0),
+    defocus_angle: f32 = 0,
+    focus_dist: f32 = 10,
 
     image_height: u32 = undefined,
     pixel_samples_scale: f32 = undefined,
@@ -28,6 +30,8 @@ pub const Camera = struct {
     basis_u: Vec3 = undefined,
     basis_v: Vec3 = undefined,
     basis_w: Vec3 = undefined,
+    defocus_disk_u: Vec3 = undefined,
+    defocus_disk_v: Vec3 = undefined,
 
     pub fn render(self: *Camera, world: HittableList, stdout: anytype, stderr: anytype) !void {
         self.initialize();
@@ -59,10 +63,9 @@ pub const Camera = struct {
 
         self.center = self.lookfrom;
 
-        const focal_length = self.lookfrom.sub(self.lookat).length();
         const theta = std.math.degreesToRadians(self.vfov);
         const h = @tan(theta / 2.0);
-        const viewport_height: f32 = 2.0 * h * focal_length;
+        const viewport_height: f32 = 2.0 * h * self.focus_dist;
         const viewport_width: f32 = viewport_height * (image_width_f / image_height_f);
 
         self.basis_w = self.lookfrom.sub(self.lookat).normalize();
@@ -76,10 +79,14 @@ pub const Camera = struct {
         self.pixel_delta_v = viewport_v.scale(1.0 / image_height_f);
 
         const viewport_upper_left = self.center
-            .sub(self.basis_w.scale(focal_length))
+            .sub(self.basis_w.scale(self.focus_dist))
             .sub(viewport_u.scale(0.5))
             .sub(viewport_v.scale(0.5));
         self.pixel00_loc = viewport_upper_left.add(self.pixel_delta_u.add(self.pixel_delta_v).scale(0.5));
+
+        const defocus_radius = self.focus_dist * @tan(std.math.degreesToRadians(self.defocus_angle / 2.0));
+        self.defocus_disk_u = self.basis_u.scale(defocus_radius);
+        self.defocus_disk_v = self.basis_v.scale(defocus_radius);
     }
 
     fn getRay(self: *const Camera, i: u32, j: u32) Ray {
@@ -89,13 +96,18 @@ pub const Camera = struct {
         const pixel_sample = self.pixel00_loc
             .add(self.pixel_delta_u.scale(fi + offset.x))
             .add(self.pixel_delta_v.scale(fj + offset.y));
-        const ray_origin = self.center;
+        const ray_origin = if (self.defocus_angle <= 0) self.center else self.defocusDiskSample();
         const ray_direction = pixel_sample.sub(ray_origin);
         return Ray.init(ray_origin, ray_direction);
     }
 
     fn sampleSquare() Vec3 {
         return Vec3.init(random.float() - 0.5, random.float() - 0.5, 0);
+    }
+
+    fn defocusDiskSample(self: *const Camera) Vec3 {
+        const p = random.inUnitDisk();
+        return self.center.add(self.defocus_disk_u.scale(p.x)).add(self.defocus_disk_v.scale(p.y));
     }
 
     fn rayColor(self: *const Camera, ray: Ray, depth: u32, world: HittableList) Color {

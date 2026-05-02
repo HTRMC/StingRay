@@ -41,6 +41,8 @@ pub fn main(init: std.process.Init) !void {
     cam.lookfrom = Vec3.init(-2, 2, 1);
     cam.lookat = Vec3.init(0, 0, -1);
     cam.vup = Vec3.init(0, 1, 0);
+    cam.defocus_angle = 10.0;
+    cam.focus_dist = 3.4;
 
     try cam.render(world, stdout, stderr);
 }

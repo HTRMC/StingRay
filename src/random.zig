@@ -34,3 +34,10 @@ pub fn onHemisphere(normal: Vec3) Vec3 {
     if (on_unit_sphere.dot(normal) > 0.0) return on_unit_sphere;
     return on_unit_sphere.scale(-1.0);
 }
+
+pub fn inUnitDisk() Vec3 {
+    while (true) {
+        const candidate = Vec3.init(floatRange(-1, 1), floatRange(-1, 1), 0);
+        if (candidate.dot(candidate) < 1) return candidate;
+    }
+}
