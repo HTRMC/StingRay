@@ -14,6 +14,7 @@ pub const Camera = struct {
     image_width: u32 = 100,
     samples_per_pixel: u32 = 10,
     max_depth: u32 = 10,
+    vfov: f32 = 90,
 
     image_height: u32 = undefined,
     pixel_samples_scale: f32 = undefined,
@@ -53,7 +54,9 @@ pub const Camera = struct {
         self.center = Vec3.init(0, 0, 0);
 
         const focal_length: f32 = 1.0;
-        const viewport_height: f32 = 2.0;
+        const theta = std.math.degreesToRadians(self.vfov);
+        const h = @tan(theta / 2.0);
+        const viewport_height: f32 = 2.0 * h * focal_length;
         const viewport_width: f32 = viewport_height * (image_width_f / image_height_f);
 
         const viewport_u = Vec3.init(viewport_width, 0, 0);
