@@ -2,10 +2,12 @@ const Vec3 = @import("color.zig").Vec3;
 const Ray = @import("ray.zig").Ray;
 const HitRecord = @import("hittable.zig").HitRecord;
 const Interval = @import("interval.zig").Interval;
+const Material = @import("material.zig").Material;
 
 pub const Sphere = struct {
     center: Vec3,
     radius: f32,
+    material: Material = .none,
 
     pub fn init(center: Vec3, radius: f32) Sphere {
         return .{ .center = center, .radius = @max(0, radius) };
@@ -32,6 +34,7 @@ pub const Sphere = struct {
         record.point = ray.at(root);
         const outward_normal = record.point.sub(self.center).scale(1.0 / self.radius);
         record.setFaceNormal(ray, outward_normal);
+        record.material = self.material;
         return true;
     }
 };
