@@ -13,6 +13,7 @@ pub const Camera = struct {
     aspect_ratio: f32 = 1.0,
     image_width: u32 = 100,
     samples_per_pixel: u32 = 10,
+    max_depth: u32 = 10,
 
     image_height: u32 = undefined,
     pixel_samples_scale: f32 = undefined,
@@ -33,7 +34,7 @@ pub const Camera = struct {
                 var sample: u32 = 0;
                 while (sample < self.samples_per_pixel) : (sample += 1) {
                     const ray = self.getRay(@intCast(i), @intCast(j));
-                    pixel_color = pixel_color.add(self.rayColor(ray, world));
+                    pixel_color = pixel_color.add(self.rayColor(ray, self.max_depth, world));
                 }
                 try write_color(stdout, pixel_color.scale(self.pixel_samples_scale));
             }
@@ -84,11 +85,13 @@ pub const Camera = struct {
         return Vec3.init(random.float() - 0.5, random.float() - 0.5, 0);
     }
 
-    fn rayColor(self: *const Camera, ray: Ray, world: HittableList) Color {
+    fn rayColor(self: *const Camera, ray: Ray, depth: u32, world: HittableList) Color {
+        if (depth == 0) return Color.init(0, 0, 0);
+
         var record: HitRecord = undefined;
         if (world.hit(ray, Interval.init(0, std.math.inf(f32)), &record)) {
             const bounce_direction = random.onHemisphere(record.normal);
-            return self.rayColor(Ray.init(record.point, bounce_direction), world).scale(0.5);
+            return self.rayColor(Ray.init(record.point, bounce_direction), depth - 1, world).scale(0.5);
         }
         const unit_direction = ray.direction().normalize();
         const blend = 0.5 * (unit_direction.y + 1.0);

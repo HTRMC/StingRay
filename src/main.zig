@@ -21,6 +21,7 @@ pub fn main(init: std.process.Init) !void {
     cam.aspect_ratio = 16.0 / 9.0;
     cam.image_width = 400;
     cam.samples_per_pixel = 100;
+    cam.max_depth = 50;
 
     try cam.render(world, stdout, stderr);
 }
