@@ -5,6 +5,15 @@ const Interval = @import("interval.zig").Interval;
 pub const Vec3 = zlm.Vec3(f32);
 pub const Color = Vec3;
 
+pub fn nearZero(v: Vec3) bool {
+    const epsilon = 1e-8;
+    return @abs(v.x) < epsilon and @abs(v.y) < epsilon and @abs(v.z) < epsilon;
+}
+
+pub fn hadamard(a: Vec3, b: Vec3) Vec3 {
+    return Vec3.init(a.x * b.x, a.y * b.y, a.z * b.z);
+}
+
 pub fn write_color(writer: anytype, pixel_color: Color) !void {
     const r = linearToGamma(pixel_color.x);
     const g = linearToGamma(pixel_color.y);

@@ -1,9 +1,31 @@
 const Ray = @import("ray.zig").Ray;
-const Color = @import("color.zig").Color;
+const color_mod = @import("color.zig");
+const Color = color_mod.Color;
 const HitRecord = @import("hittable.zig").HitRecord;
+const random = @import("random.zig");
+
+pub const Lambertian = struct {
+    albedo: Color,
+
+    pub fn scatter(
+        self: Lambertian,
+        ray_in: Ray,
+        record: HitRecord,
+        attenuation: *Color,
+        scattered: *Ray,
+    ) bool {
+        _ = ray_in;
+        var direction = record.normal.add(random.unitVector());
+        if (color_mod.nearZero(direction)) direction = record.normal;
+        scattered.* = Ray.init(record.point, direction);
+        attenuation.* = self.albedo;
+        return true;
+    }
+};
 
 pub const Material = union(enum) {
     none: void,
+    lambertian: Lambertian,
 
     pub fn scatter(
         self: Material,
@@ -12,11 +34,9 @@ pub const Material = union(enum) {
         attenuation: *Color,
         scattered: *Ray,
     ) bool {
-        _ = self;
-        _ = ray_in;
-        _ = record;
-        _ = attenuation;
-        _ = scattered;
-        return false;
+        return switch (self) {
+            .none => false,
+            inline else => |variant| variant.scatter(ray_in, record, attenuation, scattered),
+        };
     }
 };
