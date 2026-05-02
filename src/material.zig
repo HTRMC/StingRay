@@ -1,3 +1,4 @@
+const std = @import("std");
 const Ray = @import("ray.zig").Ray;
 const color_mod = @import("color.zig");
 const Color = color_mod.Color;
@@ -70,12 +71,19 @@ pub const Dielectric = struct {
         const cos_theta = @min(unit_direction.scale(-1.0).dot(record.normal), 1.0);
         const sin_theta = @sqrt(1.0 - cos_theta * cos_theta);
         const cannot_refract = ri * sin_theta > 1.0;
-        const direction = if (cannot_refract)
+        const should_reflect = cannot_refract or reflectance(cos_theta, ri) > random.float();
+        const direction = if (should_reflect)
             unit_direction.reflect(record.normal)
         else
             refract(unit_direction, record.normal, ri);
         scattered.* = Ray.init(record.point, direction);
         return true;
+    }
+
+    fn reflectance(cosine: f32, refraction_index: f32) f32 {
+        var r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
+        r0 = r0 * r0;
+        return r0 + (1.0 - r0) * std.math.pow(f32, 1.0 - cosine, 5.0);
     }
 };
 
