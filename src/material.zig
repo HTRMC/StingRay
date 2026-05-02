@@ -67,8 +67,14 @@ pub const Dielectric = struct {
         attenuation.* = Color.init(1.0, 1.0, 1.0);
         const ri = if (record.front_face) 1.0 / self.refraction_index else self.refraction_index;
         const unit_direction = ray_in.direction().normalize();
-        const refracted = refract(unit_direction, record.normal, ri);
-        scattered.* = Ray.init(record.point, refracted);
+        const cos_theta = @min(unit_direction.scale(-1.0).dot(record.normal), 1.0);
+        const sin_theta = @sqrt(1.0 - cos_theta * cos_theta);
+        const cannot_refract = ri * sin_theta > 1.0;
+        const direction = if (cannot_refract)
+            unit_direction.reflect(record.normal)
+        else
+            refract(unit_direction, record.normal, ri);
+        scattered.* = Ray.init(record.point, direction);
         return true;
     }
 };
