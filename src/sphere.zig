@@ -9,8 +9,8 @@ pub const Sphere = struct {
     radius: f32,
     material: Material = .none,
 
-    pub fn init(center: Vec3, radius: f32) Sphere {
-        return .{ .center = center, .radius = @max(0, radius) };
+    pub fn init(center: Vec3, radius: f32, material: Material) Sphere {
+        return .{ .center = center, .radius = @max(0, radius), .material = material };
     }
 
     pub fn hit(self: Sphere, ray: Ray, ray_t: Interval, record: *HitRecord) bool {

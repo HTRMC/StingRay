@@ -90,8 +90,12 @@ pub const Camera = struct {
 
         var record: HitRecord = undefined;
         if (world.hit(ray, Interval.init(0.001, std.math.inf(f32)), &record)) {
-            const bounce_direction = record.normal.add(random.unitVector());
-            return self.rayColor(Ray.init(record.point, bounce_direction), depth - 1, world).scale(0.5);
+            var scattered: Ray = undefined;
+            var attenuation: Color = undefined;
+            if (record.material.scatter(ray, record, &attenuation, &scattered)) {
+                return color_mod.hadamard(attenuation, self.rayColor(scattered, depth - 1, world));
+            }
+            return Color.init(0, 0, 0);
         }
         const unit_direction = ray.direction().normalize();
         const blend = 0.5 * (unit_direction.y + 1.0);

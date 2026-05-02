@@ -23,9 +23,27 @@ pub const Lambertian = struct {
     }
 };
 
+pub const Metal = struct {
+    albedo: Color,
+
+    pub fn scatter(
+        self: Metal,
+        ray_in: Ray,
+        record: HitRecord,
+        attenuation: *Color,
+        scattered: *Ray,
+    ) bool {
+        const reflected = ray_in.direction().reflect(record.normal);
+        scattered.* = Ray.init(record.point, reflected);
+        attenuation.* = self.albedo;
+        return true;
+    }
+};
+
 pub const Material = union(enum) {
     none: void,
     lambertian: Lambertian,
+    metal: Metal,
 
     pub fn scatter(
         self: Material,
