@@ -15,6 +15,9 @@ pub const Camera = struct {
     samples_per_pixel: u32 = 10,
     max_depth: u32 = 10,
     vfov: f32 = 90,
+    lookfrom: Vec3 = Vec3.init(0, 0, 0),
+    lookat: Vec3 = Vec3.init(0, 0, -1),
+    vup: Vec3 = Vec3.init(0, 1, 0),
 
     image_height: u32 = undefined,
     pixel_samples_scale: f32 = undefined,
@@ -22,6 +25,9 @@ pub const Camera = struct {
     pixel00_loc: Vec3 = undefined,
     pixel_delta_u: Vec3 = undefined,
     pixel_delta_v: Vec3 = undefined,
+    basis_u: Vec3 = undefined,
+    basis_v: Vec3 = undefined,
+    basis_w: Vec3 = undefined,
 
     pub fn render(self: *Camera, world: HittableList, stdout: anytype, stderr: anytype) !void {
         self.initialize();
@@ -51,22 +57,26 @@ pub const Camera = struct {
 
         self.pixel_samples_scale = 1.0 / @as(f32, @floatFromInt(self.samples_per_pixel));
 
-        self.center = Vec3.init(0, 0, 0);
+        self.center = self.lookfrom;
 
-        const focal_length: f32 = 1.0;
+        const focal_length = self.lookfrom.sub(self.lookat).length();
         const theta = std.math.degreesToRadians(self.vfov);
         const h = @tan(theta / 2.0);
         const viewport_height: f32 = 2.0 * h * focal_length;
         const viewport_width: f32 = viewport_height * (image_width_f / image_height_f);
 
-        const viewport_u = Vec3.init(viewport_width, 0, 0);
-        const viewport_v = Vec3.init(0, -viewport_height, 0);
+        self.basis_w = self.lookfrom.sub(self.lookat).normalize();
+        self.basis_u = self.vup.cross(self.basis_w).normalize();
+        self.basis_v = self.basis_w.cross(self.basis_u);
+
+        const viewport_u = self.basis_u.scale(viewport_width);
+        const viewport_v = self.basis_v.scale(-viewport_height);
 
         self.pixel_delta_u = viewport_u.scale(1.0 / image_width_f);
         self.pixel_delta_v = viewport_v.scale(1.0 / image_height_f);
 
         const viewport_upper_left = self.center
-            .sub(Vec3.init(0, 0, focal_length))
+            .sub(self.basis_w.scale(focal_length))
             .sub(viewport_u.scale(0.5))
             .sub(viewport_v.scale(0.5));
         self.pixel00_loc = viewport_upper_left.add(self.pixel_delta_u.add(self.pixel_delta_v).scale(0.5));
