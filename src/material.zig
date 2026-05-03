@@ -32,7 +32,7 @@ pub const Lambertian = struct {
         attenuation: *Color,
         scattered: *Ray,
     ) bool {
-        var direction = record.normal.add(random.unitVector());
+        var direction = random.onHemisphere(record.normal);
         if (color_mod.nearZero(direction)) direction = record.normal;
         scattered.* = Ray.initTimed(record.point, direction, ray_in.time());
         attenuation.* = self.tex.value(record.u, record.v, record.point);
@@ -42,8 +42,9 @@ pub const Lambertian = struct {
     pub fn scatteringPdf(self: Lambertian, ray_in: Ray, record: HitRecord, scattered: Ray) f32 {
         _ = self;
         _ = ray_in;
-        const cos_theta = record.normal.dot(scattered.direction().normalize());
-        return if (cos_theta < 0) 0 else cos_theta / std.math.pi;
+        _ = record;
+        _ = scattered;
+        return 1.0 / (2.0 * std.math.pi);
     }
 };
 
