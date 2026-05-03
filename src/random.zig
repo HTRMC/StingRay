@@ -7,6 +7,10 @@ pub fn float() f32 {
     return prng.random().float(f32);
 }
 
+pub fn intRange(min: i32, max: i32) i32 {
+    return prng.random().intRangeAtMost(i32, min, max);
+}
+
 pub fn floatRange(min: f32, max: f32) f32 {
     return min + (max - min) * float();
 }

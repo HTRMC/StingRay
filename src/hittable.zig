@@ -4,6 +4,7 @@ const Interval = @import("interval.zig").Interval;
 const Sphere = @import("sphere.zig").Sphere;
 const Material = @import("material.zig").Material;
 const Aabb = @import("aabb.zig").Aabb;
+const BvhNode = @import("bvh.zig").BvhNode;
 
 pub const HitRecord = struct {
     point: Vec3,
@@ -20,6 +21,7 @@ pub const HitRecord = struct {
 
 pub const Hittable = union(enum) {
     sphere: Sphere,
+    bvh_node: *BvhNode,
 
     pub fn hit(self: Hittable, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
         return switch (self) {
