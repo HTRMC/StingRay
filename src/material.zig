@@ -126,12 +126,37 @@ pub const DiffuseLight = struct {
     }
 };
 
+pub const Isotropic = struct {
+    tex: Texture,
+
+    pub fn fromColor(albedo: Color) Isotropic {
+        return .{ .tex = Texture.fromColor(albedo) };
+    }
+
+    pub fn fromTexture(tex: Texture) Isotropic {
+        return .{ .tex = tex };
+    }
+
+    pub fn scatter(
+        self: Isotropic,
+        ray_in: Ray,
+        record: HitRecord,
+        attenuation: *Color,
+        scattered: *Ray,
+    ) bool {
+        scattered.* = Ray.initTimed(record.point, random.unitVector(), ray_in.time());
+        attenuation.* = self.tex.value(record.u, record.v, record.point);
+        return true;
+    }
+};
+
 pub const Material = union(enum) {
     none: void,
     lambertian: Lambertian,
     metal: Metal,
     dielectric: Dielectric,
     diffuse_light: DiffuseLight,
+    isotropic: Isotropic,
 
     pub fn scatter(
         self: Material,

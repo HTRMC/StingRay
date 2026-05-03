@@ -9,6 +9,7 @@ const BvhNode = @import("bvh.zig").BvhNode;
 const transform_mod = @import("transform.zig");
 const Translate = transform_mod.Translate;
 const RotateY = transform_mod.RotateY;
+const ConstantMedium = @import("constant_medium.zig").ConstantMedium;
 
 pub const HitRecord = struct {
     point: Vec3,
@@ -31,6 +32,7 @@ pub const Hittable = union(enum) {
     bvh_node: *BvhNode,
     translate: *Translate,
     rotate_y: *RotateY,
+    constant_medium: *ConstantMedium,
 
     pub fn hit(self: Hittable, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
         return switch (self) {
