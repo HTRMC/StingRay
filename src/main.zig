@@ -11,6 +11,7 @@ const BvhNode = @import("bvh.zig").BvhNode;
 const transform_mod = @import("transform.zig");
 const Translate = transform_mod.Translate;
 const RotateY = transform_mod.RotateY;
+const ConstantMedium = @import("constant_medium.zig").ConstantMedium;
 const material_mod = @import("material.zig");
 const Material = material_mod.Material;
 const Metal = material_mod.Metal;
@@ -23,8 +24,8 @@ const Image = @import("image.zig").Image;
 const Perlin = @import("perlin.zig").Perlin;
 const random = @import("random.zig");
 
-const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads, simple_light, cornell_box };
-const selected_scene: Scene = .cornell_box;
+const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads, simple_light, cornell_box, cornell_smoke };
+const selected_scene: Scene = .cornell_smoke;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -41,7 +42,52 @@ pub fn main(init: std.process.Init) !void {
         .quads => try quads(stdout, stderr),
         .simple_light => try simpleLight(stdout, stderr),
         .cornell_box => try cornellBox(stdout, stderr),
+        .cornell_smoke => try cornellSmoke(stdout, stderr),
     }
+}
+
+fn cornellSmoke(stdout: anytype, stderr: anytype) !void {
+    const allocator = std.heap.page_allocator;
+    var world = HittableList.init(allocator);
+    defer world.deinit();
+
+    const red: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.65, 0.05, 0.05)) };
+    const white: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.73, 0.73, 0.73)) };
+    const green: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.12, 0.45, 0.15)) };
+    const light: Material = .{ .diffuse_light = material_mod.DiffuseLight.fromColor(Color.init(7, 7, 7)) };
+
+    try world.add(.{ .quad = Quad.init(Vec3.init(555, 0, 0), Vec3.init(0, 555, 0), Vec3.init(0, 0, 555), green) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 0), Vec3.init(0, 555, 0), Vec3.init(0, 0, 555), red) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(113, 554, 127), Vec3.init(330, 0, 0), Vec3.init(0, 0, 305), light) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(0, 555, 0), Vec3.init(555, 0, 0), Vec3.init(0, 0, 555), white) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 0), Vec3.init(555, 0, 0), Vec3.init(0, 0, 555), white) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 555), Vec3.init(555, 0, 0), Vec3.init(0, 555, 0), white) });
+
+    const box1_raw = try buildBox(allocator, Vec3.init(0, 0, 0), Vec3.init(165, 330, 165), white);
+    const box1_rot = try RotateY.create(allocator, box1_raw, 15);
+    const box1_trans = try Translate.create(allocator, .{ .rotate_y = box1_rot }, Vec3.init(265, 0, 295));
+    const box1_smoke = try ConstantMedium.createFromColor(allocator, .{ .translate = box1_trans }, 0.01, Color.init(0, 0, 0));
+    try world.add(.{ .constant_medium = box1_smoke });
+
+    const box2_raw = try buildBox(allocator, Vec3.init(0, 0, 0), Vec3.init(165, 165, 165), white);
+    const box2_rot = try RotateY.create(allocator, box2_raw, -18);
+    const box2_trans = try Translate.create(allocator, .{ .rotate_y = box2_rot }, Vec3.init(130, 0, 65));
+    const box2_smoke = try ConstantMedium.createFromColor(allocator, .{ .translate = box2_trans }, 0.01, Color.init(1, 1, 1));
+    try world.add(.{ .constant_medium = box2_smoke });
+
+    var cam: Camera = .{};
+    cam.aspect_ratio = 1.0;
+    cam.image_width = 600;
+    cam.samples_per_pixel = 200;
+    cam.max_depth = 50;
+    cam.background = Color.init(0, 0, 0);
+    cam.vfov = 40;
+    cam.lookfrom = Vec3.init(278, 278, -800);
+    cam.lookat = Vec3.init(278, 278, 0);
+    cam.vup = Vec3.init(0, 1, 0);
+    cam.defocus_angle = 0;
+
+    try cam.render(world, stdout, stderr);
 }
 
 fn cornellBox(stdout: anytype, stderr: anytype) !void {
