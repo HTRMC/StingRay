@@ -24,8 +24,8 @@ const Image = @import("image.zig").Image;
 const Perlin = @import("perlin.zig").Perlin;
 const random = @import("random.zig");
 
-const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads, simple_light, cornell_box, cornell_smoke };
-const selected_scene: Scene = .cornell_smoke;
+const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads, simple_light, cornell_box, cornell_smoke, final_scene };
+const selected_scene: Scene = .final_scene;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -43,7 +43,108 @@ pub fn main(init: std.process.Init) !void {
         .simple_light => try simpleLight(stdout, stderr),
         .cornell_box => try cornellBox(stdout, stderr),
         .cornell_smoke => try cornellSmoke(stdout, stderr),
+        .final_scene => try finalScene(stdout, stderr, 400, 250, 4),
     }
+}
+
+fn finalScene(
+    stdout: anytype,
+    stderr: anytype,
+    image_width: u32,
+    samples_per_pixel: u32,
+    max_depth: u32,
+) !void {
+    const allocator = std.heap.page_allocator;
+
+    var ground_boxes = HittableList.init(allocator);
+    defer ground_boxes.deinit();
+
+    const ground: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.48, 0.83, 0.53)) };
+
+    const boxes_per_side: i32 = 20;
+    var i: i32 = 0;
+    while (i < boxes_per_side) : (i += 1) {
+        var j: i32 = 0;
+        while (j < boxes_per_side) : (j += 1) {
+            const w: f32 = 100.0;
+            const fi: f32 = @floatFromInt(i);
+            const fj: f32 = @floatFromInt(j);
+            const x0 = -1000.0 + fi * w;
+            const z0 = -1000.0 + fj * w;
+            const y0: f32 = 0.0;
+            const x1 = x0 + w;
+            const y1 = random.floatRange(1, 101);
+            const z1 = z0 + w;
+            try addBoxQuads(&ground_boxes, Vec3.init(x0, y0, z0), Vec3.init(x1, y1, z1), ground);
+        }
+    }
+
+    var world = HittableList.init(allocator);
+    defer world.deinit();
+
+    const ground_bvh = try BvhNode.fromList(allocator, ground_boxes);
+    try world.add(.{ .bvh_node = ground_bvh });
+
+    const light: Material = .{ .diffuse_light = material_mod.DiffuseLight.fromColor(Color.init(7, 7, 7)) };
+    try world.add(.{ .quad = Quad.init(Vec3.init(123, 554, 147), Vec3.init(300, 0, 0), Vec3.init(0, 0, 265), light) });
+
+    const center1 = Vec3.init(400, 400, 200);
+    const center2 = center1.add(Vec3.init(30, 0, 0));
+    const moving_sphere_mat: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.7, 0.3, 0.1)) };
+    try world.add(.{ .sphere = Sphere.initMoving(center1, center2, 50, moving_sphere_mat) });
+
+    const glass_mat: Material = .{ .dielectric = .{ .refraction_index = 1.5 } };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(260, 150, 45), 50, glass_mat) });
+
+    const metal_mat: Material = .{ .metal = Metal.init(Color.init(0.8, 0.8, 0.9), 1.0) };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 150, 145), 50, metal_mat) });
+
+    const blue_boundary: Hittable = .{ .sphere = Sphere.init(Vec3.init(360, 150, 145), 70, glass_mat) };
+    try world.add(blue_boundary);
+    const blue_volume = try ConstantMedium.createFromColor(allocator, blue_boundary, 0.2, Color.init(0.2, 0.4, 0.9));
+    try world.add(.{ .constant_medium = blue_volume });
+
+    const mist_boundary: Hittable = .{ .sphere = Sphere.init(Vec3.init(0, 0, 0), 5000, glass_mat) };
+    const mist_volume = try ConstantMedium.createFromColor(allocator, mist_boundary, 0.0001, Color.init(1, 1, 1));
+    try world.add(.{ .constant_medium = mist_volume });
+
+    const earth_image = try allocator.create(Image);
+    earth_image.* = Image.load("earthmap.jpg");
+    const earth_tex: Texture = .{ .image = ImageTexture.init(earth_image) };
+    const earth_mat: Material = .{ .lambertian = material_mod.Lambertian.fromTexture(earth_tex) };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(400, 200, 400), 100, earth_mat) });
+
+    const perlin_noise = try allocator.create(Perlin);
+    perlin_noise.* = Perlin.init();
+    const noise_tex: Texture = .{ .noise = NoiseTexture.init(perlin_noise, 0.2) };
+    const noise_mat: Material = .{ .lambertian = material_mod.Lambertian.fromTexture(noise_tex) };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(220, 280, 300), 80, noise_mat) });
+
+    var sphere_cluster = HittableList.init(allocator);
+    defer sphere_cluster.deinit();
+    const white_mat: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.73, 0.73, 0.73)) };
+    var s: u32 = 0;
+    while (s < 1000) : (s += 1) {
+        try sphere_cluster.add(.{ .sphere = Sphere.init(random.vecRange(0, 165), 10, white_mat) });
+    }
+    const cluster_bvh = try BvhNode.fromList(allocator, sphere_cluster);
+    const cluster_rot = try RotateY.create(allocator, .{ .bvh_node = cluster_bvh }, 15);
+    const cluster_trans = try Translate.create(allocator, .{ .rotate_y = cluster_rot }, Vec3.init(-100, 270, 395));
+    try world.add(.{ .translate = cluster_trans });
+
+    var cam: Camera = .{};
+    cam.aspect_ratio = 1.0;
+    cam.image_width = image_width;
+    cam.samples_per_pixel = samples_per_pixel;
+    cam.max_depth = max_depth;
+    cam.background = Color.init(0, 0, 0);
+    cam.vfov = 40;
+    cam.lookfrom = Vec3.init(478, 278, -600);
+    cam.lookat = Vec3.init(278, 278, 0);
+    cam.vup = Vec3.init(0, 1, 0);
+    cam.defocus_angle = 0;
+
+    try cam.render(world, stdout, stderr);
 }
 
 fn cornellSmoke(stdout: anytype, stderr: anytype) !void {
