@@ -14,6 +14,7 @@ pub const Quad = struct {
     bbox: Aabb,
     normal: Vec3,
     D: f32,
+    w: Vec3,
 
     pub fn init(Q: Vec3, u: Vec3, v: Vec3, material: Material) Quad {
         const n = u.cross(v);
@@ -26,6 +27,7 @@ pub const Quad = struct {
             .bbox = computeBoundingBox(Q, u, v),
             .normal = normal,
             .D = normal.dot(Q),
+            .w = n.scale(1.0 / n.dot(n)),
         };
     }
 
