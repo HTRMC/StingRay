@@ -4,6 +4,7 @@ const Color = color_mod.Color;
 const Vec3 = color_mod.Vec3;
 const Image = @import("image.zig").Image;
 const Interval = @import("interval.zig").Interval;
+const Perlin = @import("perlin.zig").Perlin;
 
 pub const SolidColor = struct {
     albedo: Color,
@@ -68,10 +69,25 @@ pub const ImageTexture = struct {
     }
 };
 
+pub const NoiseTexture = struct {
+    noise: *const Perlin,
+
+    pub fn init(noise: *const Perlin) NoiseTexture {
+        return .{ .noise = noise };
+    }
+
+    pub fn value(self: NoiseTexture, u: f32, v: f32, p: Vec3) Color {
+        _ = u;
+        _ = v;
+        return Color.init(1, 1, 1).scale(self.noise.noise(p));
+    }
+};
+
 pub const Texture = union(enum) {
     solid: SolidColor,
     checker: Checker,
     image: ImageTexture,
+    noise: NoiseTexture,
 
     pub fn fromColor(albedo: Color) Texture {
         return .{ .solid = SolidColor.init(albedo) };
