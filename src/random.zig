@@ -45,3 +45,14 @@ pub fn inUnitDisk() Vec3 {
         if (candidate.dot(candidate) < 1) return candidate;
     }
 }
+
+pub fn cosineDirection() Vec3 {
+    const r1 = float();
+    const r2 = float();
+    const phi = 2.0 * std.math.pi * r1;
+    const sqrt_r2 = @sqrt(r2);
+    const x = @cos(phi) * sqrt_r2;
+    const y = @sin(phi) * sqrt_r2;
+    const z = @sqrt(1.0 - r2);
+    return Vec3.init(x, y, z);
+}
