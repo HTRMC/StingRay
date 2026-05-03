@@ -58,6 +58,9 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     try world.add(.{ .quad = Quad.init(Vec3.init(555, 555, 555), Vec3.init(-555, 0, 0), Vec3.init(0, 0, -555), white) });
     try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 555), Vec3.init(555, 0, 0), Vec3.init(0, 555, 0), white) });
 
+    try addBox(&world, Vec3.init(130, 0, 65), Vec3.init(295, 165, 230), white);
+    try addBox(&world, Vec3.init(265, 0, 295), Vec3.init(430, 330, 460), white);
+
     var cam: Camera = .{};
     cam.aspect_ratio = 1.0;
     cam.image_width = 600;
@@ -71,6 +74,21 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     cam.defocus_angle = 0;
 
     try cam.render(world, stdout, stderr);
+}
+
+fn addBox(world: *HittableList, a: Vec3, b: Vec3, mat: Material) !void {
+    const min_pt = Vec3.init(@min(a.x, b.x), @min(a.y, b.y), @min(a.z, b.z));
+    const max_pt = Vec3.init(@max(a.x, b.x), @max(a.y, b.y), @max(a.z, b.z));
+    const dx = Vec3.init(max_pt.x - min_pt.x, 0, 0);
+    const dy = Vec3.init(0, max_pt.y - min_pt.y, 0);
+    const dz = Vec3.init(0, 0, max_pt.z - min_pt.z);
+
+    try world.add(.{ .quad = Quad.init(Vec3.init(min_pt.x, min_pt.y, max_pt.z), dx, dy, mat) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(max_pt.x, min_pt.y, max_pt.z), dz.scale(-1), dy, mat) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(max_pt.x, min_pt.y, min_pt.z), dx.scale(-1), dy, mat) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(min_pt.x, min_pt.y, min_pt.z), dz, dy, mat) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(min_pt.x, max_pt.y, max_pt.z), dx, dz.scale(-1), mat) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(min_pt.x, min_pt.y, min_pt.z), dx, dz, mat) });
 }
 
 fn simpleLight(stdout: anytype, stderr: anytype) !void {
