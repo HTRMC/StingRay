@@ -40,7 +40,7 @@ pub const BvhNode = struct {
             node.left = left_h;
             node.right = right_h;
         } else {
-            std.mem.sort(Hittable, objects[start..end], axis, lessByAxis);
+            std.mem.sort(Hittable, objects[start..end], axis, boxCompare);
             const mid = start + span / 2;
             const left_node = try fromSlice(allocator, objects, start, mid);
             const right_node = try fromSlice(allocator, objects, mid, end);
@@ -56,8 +56,22 @@ pub const BvhNode = struct {
         return node;
     }
 
-    fn lessByAxis(axis: u8, a: Hittable, b: Hittable) bool {
-        return a.boundingBox().axisInterval(axis).min < b.boundingBox().axisInterval(axis).min;
+    fn boxCompare(axis: u8, a: Hittable, b: Hittable) bool {
+        const a_int = a.boundingBox().axisInterval(axis);
+        const b_int = b.boundingBox().axisInterval(axis);
+        return a_int.min < b_int.min;
+    }
+
+    fn boxXCompare(_: void, a: Hittable, b: Hittable) bool {
+        return boxCompare(0, a, b);
+    }
+
+    fn boxYCompare(_: void, a: Hittable, b: Hittable) bool {
+        return boxCompare(1, a, b);
+    }
+
+    fn boxZCompare(_: void, a: Hittable, b: Hittable) bool {
+        return boxCompare(2, a, b);
     }
 
     pub fn hit(self: *const BvhNode, ray: Ray, ray_t: Interval, record: *HitRecord) bool {

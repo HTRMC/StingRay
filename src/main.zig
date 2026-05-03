@@ -6,6 +6,7 @@ const Sphere = @import("sphere.zig").Sphere;
 const Hittable = @import("hittable.zig").Hittable;
 const HittableList = @import("hittable_list.zig").HittableList;
 const Camera = @import("camera.zig").Camera;
+const BvhNode = @import("bvh.zig").BvhNode;
 const material_mod = @import("material.zig");
 const Material = material_mod.Material;
 const Metal = material_mod.Metal;
@@ -60,6 +61,10 @@ pub fn main(init: std.process.Init) !void {
 
     const material3: Material = .{ .metal = Metal.init(Color.init(0.7, 0.6, 0.5), 0.0) };
     try world.add(.{ .sphere = Sphere.init(Vec3.init(4, 1, 0), 1.0, material3) });
+
+    const bvh = try BvhNode.fromList(std.heap.page_allocator, world);
+    world.clear();
+    try world.add(.{ .bvh_node = bvh });
 
     var cam: Camera = .{};
     cam.aspect_ratio = 16.0 / 9.0;
