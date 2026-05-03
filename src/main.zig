@@ -217,7 +217,11 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     const glass_mat: Material = .{ .dielectric = .{ .refraction_index = 1.5 } };
     try world.add(.{ .sphere = Sphere.init(Vec3.init(190, 90, 190), 90, glass_mat) });
 
-    const lights_sphere: Hittable = .{ .sphere = Sphere.init(Vec3.init(190, 90, 190), 90, .none) };
+    var lights_list = HittableList.init(allocator);
+    defer lights_list.deinit();
+    try lights_list.add(.{ .quad = Quad.init(Vec3.init(343, 554, 332), Vec3.init(-130, 0, 0), Vec3.init(0, 0, -105), .none) });
+    try lights_list.add(.{ .sphere = Sphere.init(Vec3.init(190, 90, 190), 90, .none) });
+    const lights_h: Hittable = .{ .list = &lights_list };
 
     var cam: Camera = .{};
     cam.aspect_ratio = 1.0;
@@ -231,7 +235,7 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
 
-    try cam.render(world, &lights_sphere, stdout, stderr);
+    try cam.render(world, &lights_h, stdout, stderr);
 }
 
 fn addBoxQuads(world: *HittableList, a: Vec3, b: Vec3, mat: Material) !void {

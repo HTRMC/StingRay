@@ -10,6 +10,7 @@ const transform_mod = @import("transform.zig");
 const Translate = transform_mod.Translate;
 const RotateY = transform_mod.RotateY;
 const ConstantMedium = @import("constant_medium.zig").ConstantMedium;
+const HittableList = @import("hittable_list.zig").HittableList;
 
 pub const HitRecord = struct {
     point: Vec3,
@@ -33,15 +34,18 @@ pub const Hittable = union(enum) {
     translate: *Translate,
     rotate_y: *RotateY,
     constant_medium: *ConstantMedium,
+    list: *const HittableList,
 
     pub fn hit(self: Hittable, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
         return switch (self) {
+            .list => |lst| lst.hit(ray, ray_t, record),
             inline else => |obj| obj.hit(ray, ray_t, record),
         };
     }
 
     pub fn boundingBox(self: Hittable) Aabb {
         return switch (self) {
+            .list => |lst| lst.boundingBox(),
             inline else => |obj| obj.boundingBox(),
         };
     }
@@ -50,6 +54,7 @@ pub const Hittable = union(enum) {
         return switch (self) {
             .quad => |q| q.pdfValue(origin, direction),
             .sphere => |s| s.pdfValue(origin, direction),
+            .list => |lst| lst.pdfValue(origin, direction),
             else => 0,
         };
     }
@@ -58,6 +63,7 @@ pub const Hittable = union(enum) {
         return switch (self) {
             .quad => |q| q.randomToward(origin),
             .sphere => |s| s.randomToward(origin),
+            .list => |lst| lst.randomToward(origin),
             else => Vec3.init(1, 0, 0),
         };
     }
