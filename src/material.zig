@@ -6,6 +6,7 @@ const Vec3 = color_mod.Vec3;
 const HitRecord = @import("hittable.zig").HitRecord;
 const random = @import("random.zig");
 const Texture = @import("texture.zig").Texture;
+const Onb = @import("onb.zig").Onb;
 
 fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) Vec3 {
     const cos_theta = @min(uv.scale(-1.0).dot(n), 1.0);
@@ -32,9 +33,9 @@ pub const Lambertian = struct {
         attenuation: *Color,
         scattered: *Ray,
     ) bool {
-        var direction = random.onHemisphere(record.normal);
-        if (color_mod.nearZero(direction)) direction = record.normal;
-        scattered.* = Ray.initTimed(record.point, direction, ray_in.time());
+        const basis = Onb.init(record.normal);
+        const direction = basis.transform(random.cosineDirection());
+        scattered.* = Ray.initTimed(record.point, direction.normalize(), ray_in.time());
         attenuation.* = self.tex.value(record.u, record.v, record.point);
         return true;
     }
@@ -42,9 +43,8 @@ pub const Lambertian = struct {
     pub fn scatteringPdf(self: Lambertian, ray_in: Ray, record: HitRecord, scattered: Ray) f32 {
         _ = self;
         _ = ray_in;
-        _ = record;
-        _ = scattered;
-        return 1.0 / (2.0 * std.math.pi);
+        const cos_theta = record.normal.dot(scattered.direction().normalize());
+        return if (cos_theta < 0) 0 else cos_theta / std.math.pi;
     }
 };
 
