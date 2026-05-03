@@ -209,18 +209,15 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 555), Vec3.init(555, 0, 0), Vec3.init(0, 555, 0), white) });
 
     const allocator2 = std.heap.page_allocator;
-    const aluminum: Material = .{ .metal = Metal.init(Color.init(0.8, 0.85, 0.88), 0.0) };
-    const box1_raw = try buildBox(allocator2, Vec3.init(0, 0, 0), Vec3.init(165, 330, 165), aluminum);
+    const box1_raw = try buildBox(allocator2, Vec3.init(0, 0, 0), Vec3.init(165, 330, 165), white);
     const box1_rot = try RotateY.create(allocator2, box1_raw, 15);
     const box1_trans = try Translate.create(allocator2, .{ .rotate_y = box1_rot }, Vec3.init(265, 0, 295));
     try world.add(.{ .translate = box1_trans });
 
-    const box2_raw = try buildBox(allocator2, Vec3.init(0, 0, 0), Vec3.init(165, 165, 165), white);
-    const box2_rot = try RotateY.create(allocator2, box2_raw, -18);
-    const box2_trans = try Translate.create(allocator2, .{ .rotate_y = box2_rot }, Vec3.init(130, 0, 65));
-    try world.add(.{ .translate = box2_trans });
+    const glass_mat: Material = .{ .dielectric = .{ .refraction_index = 1.5 } };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(190, 90, 190), 90, glass_mat) });
 
-    const lights_quad: Hittable = .{ .quad = Quad.init(Vec3.init(343, 554, 332), Vec3.init(-130, 0, 0), Vec3.init(0, 0, -105), .none) };
+    const lights_sphere: Hittable = .{ .sphere = Sphere.init(Vec3.init(190, 90, 190), 90, .none) };
 
     var cam: Camera = .{};
     cam.aspect_ratio = 1.0;
@@ -234,7 +231,7 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
 
-    try cam.render(world, &lights_quad, stdout, stderr);
+    try cam.render(world, &lights_sphere, stdout, stderr);
 }
 
 fn addBoxQuads(world: *HittableList, a: Vec3, b: Vec3, mat: Material) !void {

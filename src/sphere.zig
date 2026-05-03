@@ -5,6 +5,8 @@ const HitRecord = @import("hittable.zig").HitRecord;
 const Interval = @import("interval.zig").Interval;
 const Material = @import("material.zig").Material;
 const Aabb = @import("aabb.zig").Aabb;
+const Onb = @import("onb.zig").Onb;
+const random = @import("random.zig");
 
 pub const Sphere = struct {
     center: Ray,
@@ -77,5 +79,32 @@ pub const Sphere = struct {
             .u = phi / (2.0 * std.math.pi),
             .v = theta / std.math.pi,
         };
+    }
+
+    pub fn pdfValue(self: Sphere, origin: Vec3, direction: Vec3) f32 {
+        var record: HitRecord = undefined;
+        if (!self.hit(Ray.init(origin, direction), Interval.init(0.001, std.math.inf(f32)), &record)) return 0;
+        const dist_squared = self.center.at(0).sub(origin).dot(self.center.at(0).sub(origin));
+        const cos_theta_max = @sqrt(1.0 - self.radius * self.radius / dist_squared);
+        const solid_angle = 2.0 * std.math.pi * (1.0 - cos_theta_max);
+        return 1.0 / solid_angle;
+    }
+
+    pub fn randomToward(self: Sphere, origin: Vec3) Vec3 {
+        const direction = self.center.at(0).sub(origin);
+        const dist_squared = direction.dot(direction);
+        const basis = Onb.init(direction);
+        return basis.transform(randomToSphere(self.radius, dist_squared));
+    }
+
+    fn randomToSphere(radius: f32, distance_squared: f32) Vec3 {
+        const r1 = random.float();
+        const r2 = random.float();
+        const z = 1.0 + r2 * (@sqrt(1.0 - radius * radius / distance_squared) - 1.0);
+        const phi = 2.0 * std.math.pi * r1;
+        const sqrt_term = @sqrt(1.0 - z * z);
+        const x = @cos(phi) * sqrt_term;
+        const y = @sin(phi) * sqrt_term;
+        return Vec3.init(x, y, z);
     }
 };
