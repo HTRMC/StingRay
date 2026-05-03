@@ -95,11 +95,43 @@ pub const Dielectric = struct {
     }
 };
 
+pub const DiffuseLight = struct {
+    tex: Texture,
+
+    pub fn fromColor(emit: Color) DiffuseLight {
+        return .{ .tex = Texture.fromColor(emit) };
+    }
+
+    pub fn fromTexture(tex: Texture) DiffuseLight {
+        return .{ .tex = tex };
+    }
+
+    pub fn scatter(
+        self: DiffuseLight,
+        ray_in: Ray,
+        record: HitRecord,
+        attenuation: *Color,
+        scattered: *Ray,
+    ) bool {
+        _ = self;
+        _ = ray_in;
+        _ = record;
+        _ = attenuation;
+        _ = scattered;
+        return false;
+    }
+
+    pub fn emitted(self: DiffuseLight, u: f32, v: f32, p: Vec3) Color {
+        return self.tex.value(u, v, p);
+    }
+};
+
 pub const Material = union(enum) {
     none: void,
     lambertian: Lambertian,
     metal: Metal,
     dielectric: Dielectric,
+    diffuse_light: DiffuseLight,
 
     pub fn scatter(
         self: Material,
@@ -111,6 +143,13 @@ pub const Material = union(enum) {
         return switch (self) {
             .none => false,
             inline else => |variant| variant.scatter(ray_in, record, attenuation, scattered),
+        };
+    }
+
+    pub fn emitted(self: Material, u: f32, v: f32, p: Vec3) Color {
+        return switch (self) {
+            .diffuse_light => |light| light.emitted(u, v, p),
+            else => Color.init(0, 0, 0),
         };
     }
 };
