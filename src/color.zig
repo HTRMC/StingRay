@@ -15,9 +15,13 @@ pub fn hadamard(a: Vec3, b: Vec3) Vec3 {
 }
 
 pub fn write_color(writer: anytype, pixel_color: Color) !void {
-    const r = linearToGamma(pixel_color.x);
-    const g = linearToGamma(pixel_color.y);
-    const b = linearToGamma(pixel_color.z);
+    const r_raw = if (pixel_color.x != pixel_color.x) 0 else pixel_color.x;
+    const g_raw = if (pixel_color.y != pixel_color.y) 0 else pixel_color.y;
+    const b_raw = if (pixel_color.z != pixel_color.z) 0 else pixel_color.z;
+
+    const r = linearToGamma(r_raw);
+    const g = linearToGamma(g_raw);
+    const b = linearToGamma(b_raw);
 
     const intensity = Interval.init(0.000, 0.999);
     const rbyte: i32 = @intFromFloat(256.0 * intensity.clamp(r));
