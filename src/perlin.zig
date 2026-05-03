@@ -5,14 +5,14 @@ const Vec3 = @import("color.zig").Vec3;
 pub const Perlin = struct {
     pub const point_count: usize = 256;
 
-    randfloat: [point_count]f32,
+    randvec: [point_count]Vec3,
     perm_x: [point_count]i32,
     perm_y: [point_count]i32,
     perm_z: [point_count]i32,
 
     pub fn init() Perlin {
         var self: Perlin = undefined;
-        for (0..point_count) |i| self.randfloat[i] = random.float();
+        for (0..point_count) |i| self.randvec[i] = random.unitVector();
         generatePerm(&self.perm_x);
         generatePerm(&self.perm_y);
         generatePerm(&self.perm_z);
@@ -31,7 +31,7 @@ pub const Perlin = struct {
         const j: i32 = @intFromFloat(@floor(p.y));
         const k: i32 = @intFromFloat(@floor(p.z));
 
-        var c: [2][2][2]f32 = undefined;
+        var c: [2][2][2]Vec3 = undefined;
         for (0..2) |di| {
             for (0..2) |dj| {
                 for (0..2) |dk| {
@@ -39,11 +39,11 @@ pub const Perlin = struct {
                     const iy = wrapByte(j + @as(i32, @intCast(dj)));
                     const iz = wrapByte(k + @as(i32, @intCast(dk)));
                     const idx: usize = @intCast(self.perm_x[ix] ^ self.perm_y[iy] ^ self.perm_z[iz]);
-                    c[di][dj][dk] = self.randfloat[idx];
+                    c[di][dj][dk] = self.randvec[idx];
                 }
             }
         }
-        return trilinearInterp(c, u, v, w);
+        return perlinInterp(c, u, v, w);
     }
 
     fn wrapByte(value: i32) usize {
@@ -51,7 +51,10 @@ pub const Perlin = struct {
         return low;
     }
 
-    fn trilinearInterp(c: [2][2][2]f32, u: f32, v: f32, w: f32) f32 {
+    fn perlinInterp(c: [2][2][2]Vec3, u: f32, v: f32, w: f32) f32 {
+        const uu = u * u * (3.0 - 2.0 * u);
+        const vv = v * v * (3.0 - 2.0 * v);
+        const ww = w * w * (3.0 - 2.0 * w);
         var accum: f32 = 0.0;
         for (0..2) |i| {
             for (0..2) |j| {
@@ -59,10 +62,11 @@ pub const Perlin = struct {
                     const fi: f32 = @floatFromInt(i);
                     const fj: f32 = @floatFromInt(j);
                     const fk: f32 = @floatFromInt(k);
-                    accum += (fi * u + (1.0 - fi) * (1.0 - u)) *
-                        (fj * v + (1.0 - fj) * (1.0 - v)) *
-                        (fk * w + (1.0 - fk) * (1.0 - w)) *
-                        c[i][j][k];
+                    const weight = Vec3.init(u - fi, v - fj, w - fk);
+                    accum += (fi * uu + (1.0 - fi) * (1.0 - uu)) *
+                        (fj * vv + (1.0 - fj) * (1.0 - vv)) *
+                        (fk * ww + (1.0 - fk) * (1.0 - ww)) *
+                        c[i][j][k].dot(weight);
                 }
             }
         }
@@ -85,5 +89,4 @@ pub const Perlin = struct {
             p[ut] = tmp;
         }
     }
-
 };
