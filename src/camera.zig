@@ -9,6 +9,7 @@ const HittableList = @import("hittable_list.zig").HittableList;
 const Interval = @import("interval.zig").Interval;
 const random = @import("random.zig");
 const Hittable = @import("hittable.zig").Hittable;
+const ScatterRecord = @import("material.zig").ScatterRecord;
 const pdf_mod = @import("pdf.zig");
 const Pdf = pdf_mod.Pdf;
 const CosinePdf = pdf_mod.CosinePdf;
@@ -139,15 +140,19 @@ pub const Camera = struct {
             return self.background;
         }
 
-        var scattered: Ray = undefined;
-        var attenuation: Color = undefined;
+        var srec: ScatterRecord = .{};
         const color_from_emission = record.material.emitted(record, record.u, record.v, record.point);
 
-        if (!record.material.scatter(ray, record, &attenuation, &scattered)) {
+        if (!record.material.scatter(ray, record, &srec)) {
             return color_from_emission;
         }
 
-        const cosine_pdf: Pdf = .{ .cosine = CosinePdf.init(record.normal) };
+        if (srec.skip_pdf) {
+            return color_mod.hadamard(srec.attenuation, self.rayColor(srec.skip_pdf_ray, depth - 1, world, lights));
+        }
+
+        var scattered: Ray = undefined;
+        const cosine_pdf = srec.pdf;
         var light_pdf: Pdf = undefined;
         const sampling_pdf: Pdf = if (lights) |light_obj| blk: {
             light_pdf = .{ .hittable = HittablePdf.init(light_obj, record.point) };
@@ -160,7 +165,7 @@ pub const Camera = struct {
         const scattering_pdf = record.material.scatteringPdf(ray, record, scattered);
 
         const incoming = self.rayColor(scattered, depth - 1, world, lights);
-        const color_from_scatter = color_mod.hadamard(attenuation, incoming).scale(scattering_pdf / pdf_value);
+        const color_from_scatter = color_mod.hadamard(srec.attenuation, incoming).scale(scattering_pdf / pdf_value);
         return color_from_emission.add(color_from_scatter);
     }
 };

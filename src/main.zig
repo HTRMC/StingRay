@@ -209,7 +209,8 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 555), Vec3.init(555, 0, 0), Vec3.init(0, 555, 0), white) });
 
     const allocator2 = std.heap.page_allocator;
-    const box1_raw = try buildBox(allocator2, Vec3.init(0, 0, 0), Vec3.init(165, 330, 165), white);
+    const aluminum: Material = .{ .metal = Metal.init(Color.init(0.8, 0.85, 0.88), 0.0) };
+    const box1_raw = try buildBox(allocator2, Vec3.init(0, 0, 0), Vec3.init(165, 330, 165), aluminum);
     const box1_rot = try RotateY.create(allocator2, box1_raw, 15);
     const box1_trans = try Translate.create(allocator2, .{ .rotate_y = box1_rot }, Vec3.init(265, 0, 295));
     try world.add(.{ .translate = box1_trans });

@@ -7,6 +7,16 @@ const HitRecord = @import("hittable.zig").HitRecord;
 const random = @import("random.zig");
 const Texture = @import("texture.zig").Texture;
 const Onb = @import("onb.zig").Onb;
+const Pdf = @import("pdf.zig").Pdf;
+const CosinePdf = @import("pdf.zig").CosinePdf;
+const SpherePdf = @import("pdf.zig").SpherePdf;
+
+pub const ScatterRecord = struct {
+    attenuation: Color = Color.init(0, 0, 0),
+    pdf: Pdf = .{ .sphere = .{} },
+    skip_pdf: bool = false,
+    skip_pdf_ray: Ray = undefined,
+};
 
 fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) Vec3 {
     const cos_theta = @min(uv.scale(-1.0).dot(n), 1.0);
@@ -26,17 +36,11 @@ pub const Lambertian = struct {
         return .{ .tex = tex };
     }
 
-    pub fn scatter(
-        self: Lambertian,
-        ray_in: Ray,
-        record: HitRecord,
-        attenuation: *Color,
-        scattered: *Ray,
-    ) bool {
-        const basis = Onb.init(record.normal);
-        const direction = basis.transform(random.cosineDirection());
-        scattered.* = Ray.initTimed(record.point, direction.normalize(), ray_in.time());
-        attenuation.* = self.tex.value(record.u, record.v, record.point);
+    pub fn scatter(self: Lambertian, ray_in: Ray, record: HitRecord, srec: *ScatterRecord) bool {
+        _ = ray_in;
+        srec.attenuation = self.tex.value(record.u, record.v, record.point);
+        srec.pdf = .{ .cosine = CosinePdf.init(record.normal) };
+        srec.skip_pdf = false;
         return true;
     }
 
@@ -56,32 +60,22 @@ pub const Metal = struct {
         return .{ .albedo = albedo, .fuzz = if (fuzz < 1) fuzz else 1 };
     }
 
-    pub fn scatter(
-        self: Metal,
-        ray_in: Ray,
-        record: HitRecord,
-        attenuation: *Color,
-        scattered: *Ray,
-    ) bool {
+    pub fn scatter(self: Metal, ray_in: Ray, record: HitRecord, srec: *ScatterRecord) bool {
         const reflected = ray_in.direction().reflect(record.normal).normalize()
             .add(random.unitVector().scale(self.fuzz));
-        scattered.* = Ray.initTimed(record.point, reflected, ray_in.time());
-        attenuation.* = self.albedo;
-        return reflected.dot(record.normal) > 0;
+        srec.attenuation = self.albedo;
+        srec.skip_pdf = true;
+        srec.skip_pdf_ray = Ray.initTimed(record.point, reflected, ray_in.time());
+        return true;
     }
 };
 
 pub const Dielectric = struct {
     refraction_index: f32,
 
-    pub fn scatter(
-        self: Dielectric,
-        ray_in: Ray,
-        record: HitRecord,
-        attenuation: *Color,
-        scattered: *Ray,
-    ) bool {
-        attenuation.* = Color.init(1.0, 1.0, 1.0);
+    pub fn scatter(self: Dielectric, ray_in: Ray, record: HitRecord, srec: *ScatterRecord) bool {
+        srec.attenuation = Color.init(1.0, 1.0, 1.0);
+        srec.skip_pdf = true;
         const ri = if (record.front_face) 1.0 / self.refraction_index else self.refraction_index;
         const unit_direction = ray_in.direction().normalize();
         const cos_theta = @min(unit_direction.scale(-1.0).dot(record.normal), 1.0);
@@ -92,7 +86,7 @@ pub const Dielectric = struct {
             unit_direction.reflect(record.normal)
         else
             refract(unit_direction, record.normal, ri);
-        scattered.* = Ray.initTimed(record.point, direction, ray_in.time());
+        srec.skip_pdf_ray = Ray.initTimed(record.point, direction, ray_in.time());
         return true;
     }
 
@@ -114,18 +108,11 @@ pub const DiffuseLight = struct {
         return .{ .tex = tex };
     }
 
-    pub fn scatter(
-        self: DiffuseLight,
-        ray_in: Ray,
-        record: HitRecord,
-        attenuation: *Color,
-        scattered: *Ray,
-    ) bool {
+    pub fn scatter(self: DiffuseLight, ray_in: Ray, record: HitRecord, srec: *ScatterRecord) bool {
         _ = self;
         _ = ray_in;
         _ = record;
-        _ = attenuation;
-        _ = scattered;
+        _ = srec;
         return false;
     }
 
@@ -146,16 +133,20 @@ pub const Isotropic = struct {
         return .{ .tex = tex };
     }
 
-    pub fn scatter(
-        self: Isotropic,
-        ray_in: Ray,
-        record: HitRecord,
-        attenuation: *Color,
-        scattered: *Ray,
-    ) bool {
-        scattered.* = Ray.initTimed(record.point, random.unitVector(), ray_in.time());
-        attenuation.* = self.tex.value(record.u, record.v, record.point);
+    pub fn scatter(self: Isotropic, ray_in: Ray, record: HitRecord, srec: *ScatterRecord) bool {
+        _ = ray_in;
+        srec.attenuation = self.tex.value(record.u, record.v, record.point);
+        srec.pdf = .{ .sphere = .{} };
+        srec.skip_pdf = false;
         return true;
+    }
+
+    pub fn scatteringPdf(self: Isotropic, ray_in: Ray, record: HitRecord, scattered: Ray) f32 {
+        _ = self;
+        _ = ray_in;
+        _ = record;
+        _ = scattered;
+        return 1.0 / (4.0 * std.math.pi);
     }
 };
 
@@ -167,16 +158,10 @@ pub const Material = union(enum) {
     diffuse_light: DiffuseLight,
     isotropic: Isotropic,
 
-    pub fn scatter(
-        self: Material,
-        ray_in: Ray,
-        record: HitRecord,
-        attenuation: *Color,
-        scattered: *Ray,
-    ) bool {
+    pub fn scatter(self: Material, ray_in: Ray, record: HitRecord, srec: *ScatterRecord) bool {
         return switch (self) {
             .none => false,
-            inline else => |variant| variant.scatter(ray_in, record, attenuation, scattered),
+            inline else => |variant| variant.scatter(ray_in, record, srec),
         };
     }
 
@@ -190,6 +175,7 @@ pub const Material = union(enum) {
     pub fn scatteringPdf(self: Material, ray_in: Ray, record: HitRecord, scattered: Ray) f32 {
         return switch (self) {
             .lambertian => |lamb| lamb.scatteringPdf(ray_in, record, scattered),
+            .isotropic => |iso| iso.scatteringPdf(ray_in, record, scattered),
             else => 0,
         };
     }
