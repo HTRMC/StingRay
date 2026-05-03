@@ -1,3 +1,4 @@
+const std = @import("std");
 const Vec3 = @import("color.zig").Vec3;
 const Ray = @import("ray.zig").Ray;
 const HitRecord = @import("hittable.zig").HitRecord;
@@ -11,14 +12,20 @@ pub const Quad = struct {
     v: Vec3,
     material: Material,
     bbox: Aabb,
+    normal: Vec3,
+    D: f32,
 
     pub fn init(Q: Vec3, u: Vec3, v: Vec3, material: Material) Quad {
+        const n = u.cross(v);
+        const normal = n.normalize();
         return .{
             .Q = Q,
             .u = u,
             .v = v,
             .material = material,
             .bbox = computeBoundingBox(Q, u, v),
+            .normal = normal,
+            .D = normal.dot(Q),
         };
     }
 
@@ -33,10 +40,16 @@ pub const Quad = struct {
     }
 
     pub fn hit(self: Quad, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
-        _ = self;
-        _ = ray;
-        _ = ray_t;
-        _ = record;
-        return false;
+        const denom = self.normal.dot(ray.direction());
+        if (@abs(denom) < 1e-8) return false;
+
+        const t = (self.D - self.normal.dot(ray.origin())) / denom;
+        if (!ray_t.contains(t)) return false;
+
+        record.hit_t = t;
+        record.point = ray.at(t);
+        record.material = self.material;
+        record.setFaceNormal(ray, self.normal);
+        return true;
     }
 };
