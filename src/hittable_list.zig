@@ -4,10 +4,12 @@ const hittable_mod = @import("hittable.zig");
 const Hittable = hittable_mod.Hittable;
 const HitRecord = hittable_mod.HitRecord;
 const Interval = @import("interval.zig").Interval;
+const Aabb = @import("aabb.zig").Aabb;
 
 pub const HittableList = struct {
     allocator: std.mem.Allocator,
     objects: std.ArrayList(Hittable),
+    bbox: Aabb = .{},
 
     pub fn init(allocator: std.mem.Allocator) HittableList {
         return .{ .allocator = allocator, .objects = .empty };
@@ -19,10 +21,16 @@ pub const HittableList = struct {
 
     pub fn clear(self: *HittableList) void {
         self.objects.clearRetainingCapacity();
+        self.bbox = .{};
     }
 
     pub fn add(self: *HittableList, object: Hittable) !void {
         try self.objects.append(self.allocator, object);
+        self.bbox = Aabb.fromBoxes(self.bbox, object.boundingBox());
+    }
+
+    pub fn boundingBox(self: HittableList) Aabb {
+        return self.bbox;
     }
 
     pub fn hit(self: HittableList, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
