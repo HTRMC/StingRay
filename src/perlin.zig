@@ -20,9 +20,12 @@ pub const Perlin = struct {
     }
 
     pub fn noise(self: Perlin, p: Vec3) f32 {
-        const u = p.x - @floor(p.x);
-        const v = p.y - @floor(p.y);
-        const w = p.z - @floor(p.z);
+        var u = p.x - @floor(p.x);
+        var v = p.y - @floor(p.y);
+        var w = p.z - @floor(p.z);
+        u = u * u * (3.0 - 2.0 * u);
+        v = v * v * (3.0 - 2.0 * v);
+        w = w * w * (3.0 - 2.0 * w);
 
         const i: i32 = @intFromFloat(@floor(p.x));
         const j: i32 = @intFromFloat(@floor(p.y));
