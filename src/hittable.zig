@@ -6,7 +6,9 @@ const Quad = @import("quad.zig").Quad;
 const Material = @import("material.zig").Material;
 const Aabb = @import("aabb.zig").Aabb;
 const BvhNode = @import("bvh.zig").BvhNode;
-const Translate = @import("transform.zig").Translate;
+const transform_mod = @import("transform.zig");
+const Translate = transform_mod.Translate;
+const RotateY = transform_mod.RotateY;
 
 pub const HitRecord = struct {
     point: Vec3,
@@ -28,6 +30,7 @@ pub const Hittable = union(enum) {
     quad: Quad,
     bvh_node: *BvhNode,
     translate: *Translate,
+    rotate_y: *RotateY,
 
     pub fn hit(self: Hittable, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
         return switch (self) {

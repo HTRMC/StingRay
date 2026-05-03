@@ -8,6 +8,9 @@ const Hittable = @import("hittable.zig").Hittable;
 const HittableList = @import("hittable_list.zig").HittableList;
 const Camera = @import("camera.zig").Camera;
 const BvhNode = @import("bvh.zig").BvhNode;
+const transform_mod = @import("transform.zig");
+const Translate = transform_mod.Translate;
+const RotateY = transform_mod.RotateY;
 const material_mod = @import("material.zig");
 const Material = material_mod.Material;
 const Metal = material_mod.Metal;
@@ -58,8 +61,16 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     try world.add(.{ .quad = Quad.init(Vec3.init(555, 555, 555), Vec3.init(-555, 0, 0), Vec3.init(0, 0, -555), white) });
     try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 555), Vec3.init(555, 0, 0), Vec3.init(0, 555, 0), white) });
 
-    try addBox(&world, Vec3.init(130, 0, 65), Vec3.init(295, 165, 230), white);
-    try addBox(&world, Vec3.init(265, 0, 295), Vec3.init(430, 330, 460), white);
+    const allocator2 = std.heap.page_allocator;
+    const box1_raw = try buildBox(allocator2, Vec3.init(0, 0, 0), Vec3.init(165, 330, 165), white);
+    const box1_rot = try RotateY.create(allocator2, box1_raw, 15);
+    const box1_trans = try Translate.create(allocator2, .{ .rotate_y = box1_rot }, Vec3.init(265, 0, 295));
+    try world.add(.{ .translate = box1_trans });
+
+    const box2_raw = try buildBox(allocator2, Vec3.init(0, 0, 0), Vec3.init(165, 165, 165), white);
+    const box2_rot = try RotateY.create(allocator2, box2_raw, -18);
+    const box2_trans = try Translate.create(allocator2, .{ .rotate_y = box2_rot }, Vec3.init(130, 0, 65));
+    try world.add(.{ .translate = box2_trans });
 
     var cam: Camera = .{};
     cam.aspect_ratio = 1.0;
@@ -76,7 +87,7 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     try cam.render(world, stdout, stderr);
 }
 
-fn addBox(world: *HittableList, a: Vec3, b: Vec3, mat: Material) !void {
+fn addBoxQuads(world: *HittableList, a: Vec3, b: Vec3, mat: Material) !void {
     const min_pt = Vec3.init(@min(a.x, b.x), @min(a.y, b.y), @min(a.z, b.z));
     const max_pt = Vec3.init(@max(a.x, b.x), @max(a.y, b.y), @max(a.z, b.z));
     const dx = Vec3.init(max_pt.x - min_pt.x, 0, 0);
@@ -89,6 +100,13 @@ fn addBox(world: *HittableList, a: Vec3, b: Vec3, mat: Material) !void {
     try world.add(.{ .quad = Quad.init(Vec3.init(min_pt.x, min_pt.y, min_pt.z), dz, dy, mat) });
     try world.add(.{ .quad = Quad.init(Vec3.init(min_pt.x, max_pt.y, max_pt.z), dx, dz.scale(-1), mat) });
     try world.add(.{ .quad = Quad.init(Vec3.init(min_pt.x, min_pt.y, min_pt.z), dx, dz, mat) });
+}
+
+fn buildBox(allocator: std.mem.Allocator, a: Vec3, b: Vec3, mat: Material) !Hittable {
+    var sides = HittableList.init(allocator);
+    try addBoxQuads(&sides, a, b, mat);
+    const bvh = try BvhNode.fromList(allocator, sides);
+    return .{ .bvh_node = bvh };
 }
 
 fn simpleLight(stdout: anytype, stderr: anytype) !void {
