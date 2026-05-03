@@ -43,7 +43,7 @@ pub fn main(init: std.process.Init) !void {
         .simple_light => try simpleLight(stdout, stderr),
         .cornell_box => try cornellBox(stdout, stderr),
         .cornell_smoke => try cornellSmoke(stdout, stderr),
-        .final_scene => try finalScene(stdout, stderr, 400, 250, 4),
+        .final_scene => try finalScene(stdout, stderr, 400, 1000, 4),
     }
 }
 

@@ -23,6 +23,8 @@ pub const Camera = struct {
     background: Color = Color.init(0, 0, 0),
 
     image_height: u32 = undefined,
+    sqrt_spp: u32 = undefined,
+    recip_sqrt_spp: f32 = undefined,
     pixel_samples_scale: f32 = undefined,
     center: Vec3 = undefined,
     pixel00_loc: Vec3 = undefined,
@@ -43,10 +45,13 @@ pub const Camera = struct {
             try stderr.print("\rScanlines remaining: {} ", .{self.image_height - j});
             for (0..self.image_width) |i| {
                 var pixel_color = Color.init(0, 0, 0);
-                var sample: u32 = 0;
-                while (sample < self.samples_per_pixel) : (sample += 1) {
-                    const ray = self.getRay(@intCast(i), @intCast(j));
-                    pixel_color = pixel_color.add(self.rayColor(ray, self.max_depth, world));
+                var s_j: u32 = 0;
+                while (s_j < self.sqrt_spp) : (s_j += 1) {
+                    var s_i: u32 = 0;
+                    while (s_i < self.sqrt_spp) : (s_i += 1) {
+                        const ray = self.getRay(@intCast(i), @intCast(j), s_i, s_j);
+                        pixel_color = pixel_color.add(self.rayColor(ray, self.max_depth, world));
+                    }
                 }
                 try write_color(stdout, pixel_color.scale(self.pixel_samples_scale));
             }
@@ -60,7 +65,11 @@ pub const Camera = struct {
         self.image_height = @max(1, @as(u32, @intFromFloat(image_width_f / self.aspect_ratio)));
         const image_height_f: f32 = @floatFromInt(self.image_height);
 
-        self.pixel_samples_scale = 1.0 / @as(f32, @floatFromInt(self.samples_per_pixel));
+        const sqrt_spp_f = @sqrt(@as(f32, @floatFromInt(self.samples_per_pixel)));
+        self.sqrt_spp = @max(1, @as(u32, @intFromFloat(sqrt_spp_f)));
+        const sqrt_spp_actual: f32 = @floatFromInt(self.sqrt_spp);
+        self.pixel_samples_scale = 1.0 / (sqrt_spp_actual * sqrt_spp_actual);
+        self.recip_sqrt_spp = 1.0 / sqrt_spp_actual;
 
         self.center = self.lookfrom;
 
@@ -90,8 +99,8 @@ pub const Camera = struct {
         self.defocus_disk_v = self.basis_v.scale(defocus_radius);
     }
 
-    fn getRay(self: *const Camera, i: u32, j: u32) Ray {
-        const offset = sampleSquare();
+    fn getRay(self: *const Camera, i: u32, j: u32, s_i: u32, s_j: u32) Ray {
+        const offset = self.sampleSquareStratified(s_i, s_j);
         const fi: f32 = @floatFromInt(i);
         const fj: f32 = @floatFromInt(j);
         const pixel_sample = self.pixel00_loc
@@ -103,8 +112,12 @@ pub const Camera = struct {
         return Ray.initTimed(ray_origin, ray_direction, ray_time);
     }
 
-    fn sampleSquare() Vec3 {
-        return Vec3.init(random.float() - 0.5, random.float() - 0.5, 0);
+    fn sampleSquareStratified(self: *const Camera, s_i: u32, s_j: u32) Vec3 {
+        const fs_i: f32 = @floatFromInt(s_i);
+        const fs_j: f32 = @floatFromInt(s_j);
+        const px = ((fs_i + random.float()) * self.recip_sqrt_spp) - 0.5;
+        const py = ((fs_j + random.float()) * self.recip_sqrt_spp) - 0.5;
+        return Vec3.init(px, py, 0);
     }
 
     fn defocusDiskSample(self: *const Camera) Vec3 {
