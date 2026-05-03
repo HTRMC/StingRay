@@ -20,6 +20,7 @@ pub const Camera = struct {
     vup: Vec3 = Vec3.init(0, 1, 0),
     defocus_angle: f32 = 0,
     focus_dist: f32 = 10,
+    background: Color = Color.init(0, 0, 0),
 
     image_height: u32 = undefined,
     pixel_samples_scale: f32 = undefined,
@@ -115,16 +116,19 @@ pub const Camera = struct {
         if (depth == 0) return Color.init(0, 0, 0);
 
         var record: HitRecord = undefined;
-        if (world.hit(ray, Interval.init(0.001, std.math.inf(f32)), &record)) {
-            var scattered: Ray = undefined;
-            var attenuation: Color = undefined;
-            if (record.material.scatter(ray, record, &attenuation, &scattered)) {
-                return color_mod.hadamard(attenuation, self.rayColor(scattered, depth - 1, world));
-            }
-            return Color.init(0, 0, 0);
+        if (!world.hit(ray, Interval.init(0.001, std.math.inf(f32)), &record)) {
+            return self.background;
         }
-        const unit_direction = ray.direction().normalize();
-        const blend = 0.5 * (unit_direction.y + 1.0);
-        return Color.init(1.0, 1.0, 1.0).scale(1.0 - blend).add(Color.init(0.5, 0.7, 1.0).scale(blend));
+
+        var scattered: Ray = undefined;
+        var attenuation: Color = undefined;
+        const color_from_emission = record.material.emitted(record.u, record.v, record.point);
+
+        if (!record.material.scatter(ray, record, &attenuation, &scattered)) {
+            return color_from_emission;
+        }
+
+        const color_from_scatter = color_mod.hadamard(attenuation, self.rayColor(scattered, depth - 1, world));
+        return color_from_emission.add(color_from_scatter);
     }
 };

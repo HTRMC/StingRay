@@ -66,6 +66,7 @@ fn quads(stdout: anytype, stderr: anytype) !void {
     cam.lookat = Vec3.init(0, 0, 0);
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
+    cam.background = Color.init(0.70, 0.80, 1.00);
 
     try cam.render(world, stdout, stderr);
 }
@@ -93,6 +94,7 @@ fn perlinSpheres(stdout: anytype, stderr: anytype) !void {
     cam.lookat = Vec3.init(0, 0, 0);
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
+    cam.background = Color.init(0.70, 0.80, 1.00);
 
     try cam.render(world, stdout, stderr);
 }
@@ -156,6 +158,7 @@ fn bouncingSpheres(stdout: anytype, stderr: anytype) !void {
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0.6;
     cam.focus_dist = 10.0;
+    cam.background = Color.init(0.70, 0.80, 1.00);
 
     try cam.render(world, stdout, stderr);
 }
@@ -182,6 +185,7 @@ fn earth(stdout: anytype, stderr: anytype) !void {
     cam.lookat = Vec3.init(0, 0, 0);
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
+    cam.background = Color.init(0.70, 0.80, 1.00);
 
     try cam.render(world, stdout, stderr);
 }
@@ -211,6 +215,7 @@ fn checkeredSpheres(stdout: anytype, stderr: anytype) !void {
     cam.lookat = Vec3.init(0, 0, 0);
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
+    cam.background = Color.init(0.70, 0.80, 1.00);
 
     try cam.render(world, stdout, stderr);
 }
