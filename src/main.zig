@@ -10,7 +10,13 @@ const BvhNode = @import("bvh.zig").BvhNode;
 const material_mod = @import("material.zig");
 const Material = material_mod.Material;
 const Metal = material_mod.Metal;
+const texture_mod = @import("texture.zig");
+const Texture = texture_mod.Texture;
+const Checker = texture_mod.Checker;
 const random = @import("random.zig");
+
+const Scene = enum { bouncing_spheres, checkered_spheres };
+const selected_scene: Scene = .checkered_spheres;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -19,6 +25,13 @@ pub fn main(init: std.process.Init) !void {
     var stderr_writer = std.Io.File.stderr().writer(io, &.{});
     const stderr = &stderr_writer.interface;
 
+    switch (selected_scene) {
+        .bouncing_spheres => try bouncingSpheres(stdout, stderr),
+        .checkered_spheres => try checkeredSpheres(stdout, stderr),
+    }
+}
+
+fn bouncingSpheres(stdout: anytype, stderr: anytype) !void {
     var world = HittableList.init(std.heap.page_allocator);
     defer world.deinit();
 
@@ -77,6 +90,35 @@ pub fn main(init: std.process.Init) !void {
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0.6;
     cam.focus_dist = 10.0;
+
+    try cam.render(world, stdout, stderr);
+}
+
+fn checkeredSpheres(stdout: anytype, stderr: anytype) !void {
+    const allocator = std.heap.page_allocator;
+    var world = HittableList.init(allocator);
+    defer world.deinit();
+
+    const even_tex = try allocator.create(Texture);
+    even_tex.* = Texture.fromColor(Color.init(0.2, 0.3, 0.1));
+    const odd_tex = try allocator.create(Texture);
+    odd_tex.* = Texture.fromColor(Color.init(0.9, 0.9, 0.9));
+    const checker_tex: Texture = .{ .checker = Checker.init(0.32, even_tex, odd_tex) };
+    const checker_material: Material = .{ .lambertian = material_mod.Lambertian.fromTexture(checker_tex) };
+
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -10, 0), 10, checker_material) });
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 10, 0), 10, checker_material) });
+
+    var cam: Camera = .{};
+    cam.aspect_ratio = 16.0 / 9.0;
+    cam.image_width = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth = 50;
+    cam.vfov = 20;
+    cam.lookfrom = Vec3.init(13, 2, 3);
+    cam.lookat = Vec3.init(0, 0, 0);
+    cam.vup = Vec3.init(0, 1, 0);
+    cam.defocus_angle = 0;
 
     try cam.render(world, stdout, stderr);
 }
