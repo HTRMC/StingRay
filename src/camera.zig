@@ -98,7 +98,8 @@ pub const Camera = struct {
             .add(self.pixel_delta_v.scale(fj + offset.y));
         const ray_origin = if (self.defocus_angle <= 0) self.center else self.defocusDiskSample();
         const ray_direction = pixel_sample.sub(ray_origin);
-        return Ray.init(ray_origin, ray_direction);
+        const ray_time = random.float();
+        return Ray.initTimed(ray_origin, ray_direction, ray_time);
     }
 
     fn sampleSquare() Vec3 {
