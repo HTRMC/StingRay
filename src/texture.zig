@@ -71,15 +71,16 @@ pub const ImageTexture = struct {
 
 pub const NoiseTexture = struct {
     noise: *const Perlin,
+    scale: f32,
 
-    pub fn init(noise: *const Perlin) NoiseTexture {
-        return .{ .noise = noise };
+    pub fn init(noise: *const Perlin, scale: f32) NoiseTexture {
+        return .{ .noise = noise, .scale = scale };
     }
 
     pub fn value(self: NoiseTexture, u: f32, v: f32, p: Vec3) Color {
         _ = u;
         _ = v;
-        return Color.init(1, 1, 1).scale(self.noise.noise(p));
+        return Color.init(1, 1, 1).scale(self.noise.noise(p.scale(self.scale)));
     }
 };
 

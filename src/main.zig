@@ -14,11 +14,13 @@ const texture_mod = @import("texture.zig");
 const Texture = texture_mod.Texture;
 const Checker = texture_mod.Checker;
 const ImageTexture = texture_mod.ImageTexture;
+const NoiseTexture = texture_mod.NoiseTexture;
 const Image = @import("image.zig").Image;
+const Perlin = @import("perlin.zig").Perlin;
 const random = @import("random.zig");
 
-const Scene = enum { bouncing_spheres, checkered_spheres, earth };
-const selected_scene: Scene = .earth;
+const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres };
+const selected_scene: Scene = .perlin_spheres;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -31,7 +33,35 @@ pub fn main(init: std.process.Init) !void {
         .bouncing_spheres => try bouncingSpheres(stdout, stderr),
         .checkered_spheres => try checkeredSpheres(stdout, stderr),
         .earth => try earth(stdout, stderr),
+        .perlin_spheres => try perlinSpheres(stdout, stderr),
     }
+}
+
+fn perlinSpheres(stdout: anytype, stderr: anytype) !void {
+    const allocator = std.heap.page_allocator;
+    var world = HittableList.init(allocator);
+    defer world.deinit();
+
+    const perlin_noise = try allocator.create(Perlin);
+    perlin_noise.* = Perlin.init();
+    const noise_tex: Texture = .{ .noise = NoiseTexture.init(perlin_noise, 4) };
+    const noise_material: Material = .{ .lambertian = material_mod.Lambertian.fromTexture(noise_tex) };
+
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -1000, 0), 1000, noise_material) });
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 2, 0), 2, noise_material) });
+
+    var cam: Camera = .{};
+    cam.aspect_ratio = 16.0 / 9.0;
+    cam.image_width = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth = 50;
+    cam.vfov = 20;
+    cam.lookfrom = Vec3.init(13, 2, 3);
+    cam.lookat = Vec3.init(0, 0, 0);
+    cam.vup = Vec3.init(0, 1, 0);
+    cam.defocus_angle = 0;
+
+    try cam.render(world, stdout, stderr);
 }
 
 fn bouncingSpheres(stdout: anytype, stderr: anytype) !void {
