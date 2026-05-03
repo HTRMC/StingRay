@@ -57,7 +57,11 @@ pub const Camera = struct {
                     var s_i: u32 = 0;
                     while (s_i < self.sqrt_spp) : (s_i += 1) {
                         const ray = self.getRay(@intCast(i), @intCast(j), s_i, s_j);
-                        pixel_color = pixel_color.add(self.rayColor(ray, self.max_depth, world, lights));
+                        const sample = self.rayColor(ray, self.max_depth, world, lights);
+                        const sx = if (sample.x != sample.x) 0 else sample.x;
+                        const sy = if (sample.y != sample.y) 0 else sample.y;
+                        const sz = if (sample.z != sample.z) 0 else sample.z;
+                        pixel_color = pixel_color.add(Color.init(sx, sy, sz));
                     }
                 }
                 try write_color(stdout, pixel_color.scale(self.pixel_samples_scale));
