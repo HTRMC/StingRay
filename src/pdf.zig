@@ -5,7 +5,7 @@ const random = @import("random.zig");
 const Hittable = @import("hittable.zig").Hittable;
 
 pub const SpherePdf = struct {
-    pub fn value(self: SpherePdf, direction: Vec3) f32 {
+    pub fn value(self: SpherePdf, direction: Vec3) f64 {
         _ = self;
         _ = direction;
         return 1.0 / (4.0 * std.math.pi);
@@ -24,7 +24,7 @@ pub const CosinePdf = struct {
         return .{ .basis = Onb.init(w) };
     }
 
-    pub fn value(self: CosinePdf, direction: Vec3) f32 {
+    pub fn value(self: CosinePdf, direction: Vec3) f64 {
         const cos_theta = direction.normalize().dot(self.basis.w());
         return @max(0, cos_theta / std.math.pi);
     }
@@ -42,7 +42,7 @@ pub const HittablePdf = struct {
         return .{ .object = object, .origin = origin };
     }
 
-    pub fn value(self: HittablePdf, direction: Vec3) f32 {
+    pub fn value(self: HittablePdf, direction: Vec3) f64 {
         return self.object.pdfValue(self.origin, direction);
     }
 
@@ -59,7 +59,7 @@ pub const MixturePdf = struct {
         return .{ .p0 = p0, .p1 = p1 };
     }
 
-    pub fn value(self: MixturePdf, direction: Vec3) f32 {
+    pub fn value(self: MixturePdf, direction: Vec3) f64 {
         return 0.5 * self.p0.value(direction) + 0.5 * self.p1.value(direction);
     }
 
@@ -75,7 +75,7 @@ pub const Pdf = union(enum) {
     hittable: HittablePdf,
     mixture: MixturePdf,
 
-    pub fn value(self: Pdf, direction: Vec3) f32 {
+    pub fn value(self: Pdf, direction: Vec3) f64 {
         return switch (self) {
             inline else => |variant| variant.value(direction),
         };

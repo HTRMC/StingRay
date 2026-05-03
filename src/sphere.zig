@@ -10,11 +10,11 @@ const random = @import("random.zig");
 
 pub const Sphere = struct {
     center: Ray,
-    radius: f32,
+    radius: f64,
     material: Material = .none,
     bbox: Aabb,
 
-    pub fn init(static_center: Vec3, radius: f32, material: Material) Sphere {
+    pub fn init(static_center: Vec3, radius: f64, material: Material) Sphere {
         const r = @max(0, radius);
         const rvec = Vec3.init(r, r, r);
         return .{
@@ -25,7 +25,7 @@ pub const Sphere = struct {
         };
     }
 
-    pub fn initMoving(center1: Vec3, center2: Vec3, radius: f32, material: Material) Sphere {
+    pub fn initMoving(center1: Vec3, center2: Vec3, radius: f64, material: Material) Sphere {
         const r = @max(0, radius);
         const rvec = Vec3.init(r, r, r);
         const center = Ray.init(center1, center2.sub(center1));
@@ -72,7 +72,7 @@ pub const Sphere = struct {
         return true;
     }
 
-    fn getSphereUv(p: Vec3) struct { u: f32, v: f32 } {
+    fn getSphereUv(p: Vec3) struct { u: f64, v: f64 } {
         const theta = std.math.acos(-p.y);
         const phi = std.math.atan2(-p.z, p.x) + std.math.pi;
         return .{
@@ -81,9 +81,9 @@ pub const Sphere = struct {
         };
     }
 
-    pub fn pdfValue(self: Sphere, origin: Vec3, direction: Vec3) f32 {
+    pub fn pdfValue(self: Sphere, origin: Vec3, direction: Vec3) f64 {
         var record: HitRecord = undefined;
-        if (!self.hit(Ray.init(origin, direction), Interval.init(0.001, std.math.inf(f32)), &record)) return 0;
+        if (!self.hit(Ray.init(origin, direction), Interval.init(0.001, std.math.inf(f64)), &record)) return 0;
         const dist_squared = self.center.at(0).sub(origin).dot(self.center.at(0).sub(origin));
         const cos_theta_max = @sqrt(1.0 - self.radius * self.radius / dist_squared);
         const solid_angle = 2.0 * std.math.pi * (1.0 - cos_theta_max);
@@ -97,7 +97,7 @@ pub const Sphere = struct {
         return basis.transform(randomToSphere(self.radius, dist_squared));
     }
 
-    fn randomToSphere(radius: f32, distance_squared: f32) Vec3 {
+    fn randomToSphere(radius: f64, distance_squared: f64) Vec3 {
         const r1 = random.float();
         const r2 = random.float();
         const z = 1.0 + r2 * (@sqrt(1.0 - radius * radius / distance_squared) - 1.0);

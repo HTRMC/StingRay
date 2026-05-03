@@ -35,11 +35,11 @@ pub const HittableList = struct {
         return self.bbox;
     }
 
-    pub fn pdfValue(self: HittableList, origin: Vec3, direction: Vec3) f32 {
+    pub fn pdfValue(self: HittableList, origin: Vec3, direction: Vec3) f64 {
         const count = self.objects.items.len;
         if (count == 0) return 0;
-        const weight = 1.0 / @as(f32, @floatFromInt(count));
-        var sum: f32 = 0;
+        const weight = 1.0 / @as(f64, @floatFromInt(count));
+        var sum: f64 = 0;
         for (self.objects.items) |object| {
             sum += weight * object.pdfValue(origin, direction);
         }

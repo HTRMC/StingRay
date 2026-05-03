@@ -14,9 +14,9 @@ pub const Quad = struct {
     material: Material,
     bbox: Aabb,
     normal: Vec3,
-    D: f32,
+    D: f64,
     w: Vec3,
-    area: f32,
+    area: f64,
 
     pub fn init(Q: Vec3, u: Vec3, v: Vec3, material: Material) Quad {
         const n = u.cross(v);
@@ -34,9 +34,9 @@ pub const Quad = struct {
         };
     }
 
-    pub fn pdfValue(self: Quad, origin: Vec3, direction: Vec3) f32 {
+    pub fn pdfValue(self: Quad, origin: Vec3, direction: Vec3) f64 {
         var record: HitRecord = undefined;
-        if (!self.hit(Ray.init(origin, direction), Interval.init(0.001, std.math.inf(f32)), &record)) return 0;
+        if (!self.hit(Ray.init(origin, direction), Interval.init(0.001, std.math.inf(f64)), &record)) return 0;
         const dist_squared = record.hit_t * record.hit_t * direction.dot(direction);
         const cosine = @abs(direction.dot(record.normal) / direction.length());
         return dist_squared / (cosine * self.area);
@@ -78,7 +78,7 @@ pub const Quad = struct {
         return true;
     }
 
-    fn isInterior(a: f32, b: f32, record: *HitRecord) bool {
+    fn isInterior(a: f64, b: f64, record: *HitRecord) bool {
         const unit_int = Interval.init(0, 1);
         if (!unit_int.contains(a) or !unit_int.contains(b)) return false;
         record.u = a;

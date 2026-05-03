@@ -15,13 +15,13 @@ const random = @import("random.zig");
 
 pub const ConstantMedium = struct {
     boundary: *Hittable,
-    neg_inv_density: f32,
+    neg_inv_density: f64,
     phase_function: Material,
 
     pub fn createFromColor(
         allocator: std.mem.Allocator,
         boundary: Hittable,
-        density: f32,
+        density: f64,
         albedo: Color,
     ) !*ConstantMedium {
         return create(allocator, boundary, density, .{ .isotropic = Isotropic.fromColor(albedo) });
@@ -30,7 +30,7 @@ pub const ConstantMedium = struct {
     pub fn create(
         allocator: std.mem.Allocator,
         boundary: Hittable,
-        density: f32,
+        density: f64,
         phase_function: Material,
     ) !*ConstantMedium {
         const obj_ptr = try allocator.create(Hittable);
@@ -49,7 +49,7 @@ pub const ConstantMedium = struct {
         var rec2: HitRecord = undefined;
 
         if (!self.boundary.hit(ray, Interval.universe, &rec1)) return false;
-        if (!self.boundary.hit(ray, Interval.init(rec1.hit_t + 0.0001, std.math.inf(f32)), &rec2)) return false;
+        if (!self.boundary.hit(ray, Interval.init(rec1.hit_t + 0.0001, std.math.inf(f64)), &rec2)) return false;
 
         var t1 = rec1.hit_t;
         var t2 = rec2.hit_t;

@@ -1,13 +1,13 @@
 const std = @import("std");
 
 pub const Interval = struct {
-    min: f32,
-    max: f32,
+    min: f64,
+    max: f64,
 
-    pub const empty: Interval = .{ .min = std.math.inf(f32), .max = -std.math.inf(f32) };
-    pub const universe: Interval = .{ .min = -std.math.inf(f32), .max = std.math.inf(f32) };
+    pub const empty: Interval = .{ .min = std.math.inf(f64), .max = -std.math.inf(f64) };
+    pub const universe: Interval = .{ .min = -std.math.inf(f64), .max = std.math.inf(f64) };
 
-    pub fn init(min: f32, max: f32) Interval {
+    pub fn init(min: f64, max: f64) Interval {
         return .{ .min = min, .max = max };
     }
 
@@ -18,30 +18,30 @@ pub const Interval = struct {
         };
     }
 
-    pub fn size(self: Interval) f32 {
+    pub fn size(self: Interval) f64 {
         return self.max - self.min;
     }
 
-    pub fn contains(self: Interval, x: f32) bool {
+    pub fn contains(self: Interval, x: f64) bool {
         return self.min <= x and x <= self.max;
     }
 
-    pub fn surrounds(self: Interval, x: f32) bool {
+    pub fn surrounds(self: Interval, x: f64) bool {
         return self.min < x and x < self.max;
     }
 
-    pub fn clamp(self: Interval, x: f32) f32 {
+    pub fn clamp(self: Interval, x: f64) f64 {
         if (x < self.min) return self.min;
         if (x > self.max) return self.max;
         return x;
     }
 
-    pub fn expand(self: Interval, delta: f32) Interval {
+    pub fn expand(self: Interval, delta: f64) Interval {
         const padding = delta / 2.0;
         return .{ .min = self.min - padding, .max = self.max + padding };
     }
 
-    pub fn shift(self: Interval, displacement: f32) Interval {
+    pub fn shift(self: Interval, displacement: f64) Interval {
         return .{ .min = self.min + displacement, .max = self.max + displacement };
     }
 };

@@ -2,11 +2,11 @@ const std = @import("std");
 const zlm = @import("zlm").init(.{ .graphics_api = .opengl, .shader_lang = .glsl });
 const Interval = @import("interval.zig").Interval;
 
-pub const Vec3 = zlm.Vec3(f32);
+pub const Vec3 = zlm.Vec3(f64);
 pub const Color = Vec3;
 
 pub fn nearZero(v: Vec3) bool {
-    const epsilon = 1e-8;
+    const epsilon: f64 = 1e-8;
     return @abs(v.x) < epsilon and @abs(v.y) < epsilon and @abs(v.z) < epsilon;
 }
 
@@ -31,7 +31,7 @@ pub fn write_color(writer: anytype, pixel_color: Color) !void {
     try writer.print("{} {} {}\n", .{ rbyte, gbyte, bbyte });
 }
 
-fn linearToGamma(linear: f32) f32 {
+fn linearToGamma(linear: f64) f64 {
     if (linear > 0) return @sqrt(linear);
     return 0;
 }

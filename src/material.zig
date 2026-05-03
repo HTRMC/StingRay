@@ -18,7 +18,7 @@ pub const ScatterRecord = struct {
     skip_pdf_ray: Ray = undefined,
 };
 
-fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) Vec3 {
+fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) Vec3 {
     const cos_theta = @min(uv.scale(-1.0).dot(n), 1.0);
     const r_out_perp = uv.add(n.scale(cos_theta)).scale(etai_over_etat);
     const r_out_parallel = n.scale(-@sqrt(@abs(1.0 - r_out_perp.dot(r_out_perp))));
@@ -44,7 +44,7 @@ pub const Lambertian = struct {
         return true;
     }
 
-    pub fn scatteringPdf(self: Lambertian, ray_in: Ray, record: HitRecord, scattered: Ray) f32 {
+    pub fn scatteringPdf(self: Lambertian, ray_in: Ray, record: HitRecord, scattered: Ray) f64 {
         _ = self;
         _ = ray_in;
         const cos_theta = record.normal.dot(scattered.direction().normalize());
@@ -54,9 +54,9 @@ pub const Lambertian = struct {
 
 pub const Metal = struct {
     albedo: Color,
-    fuzz: f32,
+    fuzz: f64,
 
-    pub fn init(albedo: Color, fuzz: f32) Metal {
+    pub fn init(albedo: Color, fuzz: f64) Metal {
         return .{ .albedo = albedo, .fuzz = if (fuzz < 1) fuzz else 1 };
     }
 
@@ -71,7 +71,7 @@ pub const Metal = struct {
 };
 
 pub const Dielectric = struct {
-    refraction_index: f32,
+    refraction_index: f64,
 
     pub fn scatter(self: Dielectric, ray_in: Ray, record: HitRecord, srec: *ScatterRecord) bool {
         srec.attenuation = Color.init(1.0, 1.0, 1.0);
@@ -90,10 +90,10 @@ pub const Dielectric = struct {
         return true;
     }
 
-    fn reflectance(cosine: f32, refraction_index: f32) f32 {
+    fn reflectance(cosine: f64, refraction_index: f64) f64 {
         var r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
         r0 = r0 * r0;
-        return r0 + (1.0 - r0) * std.math.pow(f32, 1.0 - cosine, 5.0);
+        return r0 + (1.0 - r0) * std.math.pow(f64, 1.0 - cosine, 5.0);
     }
 };
 
@@ -116,7 +116,7 @@ pub const DiffuseLight = struct {
         return false;
     }
 
-    pub fn emitted(self: DiffuseLight, record: HitRecord, u: f32, v: f32, p: Vec3) Color {
+    pub fn emitted(self: DiffuseLight, record: HitRecord, u: f64, v: f64, p: Vec3) Color {
         if (!record.front_face) return Color.init(0, 0, 0);
         return self.tex.value(u, v, p);
     }
@@ -141,7 +141,7 @@ pub const Isotropic = struct {
         return true;
     }
 
-    pub fn scatteringPdf(self: Isotropic, ray_in: Ray, record: HitRecord, scattered: Ray) f32 {
+    pub fn scatteringPdf(self: Isotropic, ray_in: Ray, record: HitRecord, scattered: Ray) f64 {
         _ = self;
         _ = ray_in;
         _ = record;
@@ -165,14 +165,14 @@ pub const Material = union(enum) {
         };
     }
 
-    pub fn emitted(self: Material, record: HitRecord, u: f32, v: f32, p: Vec3) Color {
+    pub fn emitted(self: Material, record: HitRecord, u: f64, v: f64, p: Vec3) Color {
         return switch (self) {
             .diffuse_light => |light| light.emitted(record, u, v, p),
             else => Color.init(0, 0, 0),
         };
     }
 
-    pub fn scatteringPdf(self: Material, ray_in: Ray, record: HitRecord, scattered: Ray) f32 {
+    pub fn scatteringPdf(self: Material, ray_in: Ray, record: HitRecord, scattered: Ray) f64 {
         return switch (self) {
             .lambertian => |lamb| lamb.scatteringPdf(ray_in, record, scattered),
             .isotropic => |iso| iso.scatteringPdf(ray_in, record, scattered),

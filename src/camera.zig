@@ -16,22 +16,22 @@ const CosinePdf = pdf_mod.CosinePdf;
 const HittablePdf = pdf_mod.HittablePdf;
 
 pub const Camera = struct {
-    aspect_ratio: f32 = 1.0,
+    aspect_ratio: f64 = 1.0,
     image_width: u32 = 100,
     samples_per_pixel: u32 = 10,
     max_depth: u32 = 10,
-    vfov: f32 = 90,
+    vfov: f64 = 90,
     lookfrom: Vec3 = Vec3.init(0, 0, 0),
     lookat: Vec3 = Vec3.init(0, 0, -1),
     vup: Vec3 = Vec3.init(0, 1, 0),
-    defocus_angle: f32 = 0,
-    focus_dist: f32 = 10,
+    defocus_angle: f64 = 0,
+    focus_dist: f64 = 10,
     background: Color = Color.init(0, 0, 0),
 
     image_height: u32 = undefined,
     sqrt_spp: u32 = undefined,
-    recip_sqrt_spp: f32 = undefined,
-    pixel_samples_scale: f32 = undefined,
+    recip_sqrt_spp: f64 = undefined,
+    pixel_samples_scale: f64 = undefined,
     center: Vec3 = undefined,
     pixel00_loc: Vec3 = undefined,
     pixel_delta_u: Vec3 = undefined,
@@ -71,13 +71,13 @@ pub const Camera = struct {
     }
 
     fn initialize(self: *Camera) void {
-        const image_width_f: f32 = @floatFromInt(self.image_width);
+        const image_width_f: f64 = @floatFromInt(self.image_width);
         self.image_height = @max(1, @as(u32, @intFromFloat(image_width_f / self.aspect_ratio)));
-        const image_height_f: f32 = @floatFromInt(self.image_height);
+        const image_height_f: f64 = @floatFromInt(self.image_height);
 
-        const sqrt_spp_f = @sqrt(@as(f32, @floatFromInt(self.samples_per_pixel)));
+        const sqrt_spp_f = @sqrt(@as(f64, @floatFromInt(self.samples_per_pixel)));
         self.sqrt_spp = @max(1, @as(u32, @intFromFloat(sqrt_spp_f)));
-        const sqrt_spp_actual: f32 = @floatFromInt(self.sqrt_spp);
+        const sqrt_spp_actual: f64 = @floatFromInt(self.sqrt_spp);
         self.pixel_samples_scale = 1.0 / (sqrt_spp_actual * sqrt_spp_actual);
         self.recip_sqrt_spp = 1.0 / sqrt_spp_actual;
 
@@ -85,8 +85,8 @@ pub const Camera = struct {
 
         const theta = std.math.degreesToRadians(self.vfov);
         const h = @tan(theta / 2.0);
-        const viewport_height: f32 = 2.0 * h * self.focus_dist;
-        const viewport_width: f32 = viewport_height * (image_width_f / image_height_f);
+        const viewport_height: f64 = 2.0 * h * self.focus_dist;
+        const viewport_width: f64 = viewport_height * (image_width_f / image_height_f);
 
         self.basis_w = self.lookfrom.sub(self.lookat).normalize();
         self.basis_u = self.vup.cross(self.basis_w).normalize();
@@ -111,8 +111,8 @@ pub const Camera = struct {
 
     fn getRay(self: *const Camera, i: u32, j: u32, s_i: u32, s_j: u32) Ray {
         const offset = self.sampleSquareStratified(s_i, s_j);
-        const fi: f32 = @floatFromInt(i);
-        const fj: f32 = @floatFromInt(j);
+        const fi: f64 = @floatFromInt(i);
+        const fj: f64 = @floatFromInt(j);
         const pixel_sample = self.pixel00_loc
             .add(self.pixel_delta_u.scale(fi + offset.x))
             .add(self.pixel_delta_v.scale(fj + offset.y));
@@ -123,8 +123,8 @@ pub const Camera = struct {
     }
 
     fn sampleSquareStratified(self: *const Camera, s_i: u32, s_j: u32) Vec3 {
-        const fs_i: f32 = @floatFromInt(s_i);
-        const fs_j: f32 = @floatFromInt(s_j);
+        const fs_i: f64 = @floatFromInt(s_i);
+        const fs_j: f64 = @floatFromInt(s_j);
         const px = ((fs_i + random.float()) * self.recip_sqrt_spp) - 0.5;
         const py = ((fs_j + random.float()) * self.recip_sqrt_spp) - 0.5;
         return Vec3.init(px, py, 0);
@@ -139,7 +139,7 @@ pub const Camera = struct {
         if (depth == 0) return Color.init(0, 0, 0);
 
         var record: HitRecord = undefined;
-        if (!world.hit(ray, Interval.init(0.001, std.math.inf(f32)), &record)) {
+        if (!world.hit(ray, Interval.init(0.001, std.math.inf(f64)), &record)) {
             return self.background;
         }
 
@@ -155,7 +155,7 @@ pub const Camera = struct {
         }
 
         const cosine_pdf = srec.pdf;
-        var pdf_value: f32 = 0;
+        var pdf_value: f64 = 0;
         var direction: Vec3 = undefined;
         if (lights) |light_obj| {
             const light_pdf: Pdf = .{ .hittable = HittablePdf.init(light_obj, record.point) };

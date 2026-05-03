@@ -3,15 +3,15 @@ const Vec3 = @import("color.zig").Vec3;
 
 var prng: std.Random.DefaultPrng = .init(0);
 
-pub fn float() f32 {
-    return prng.random().float(f32);
+pub fn float() f64 {
+    return prng.random().float(f64);
 }
 
 pub fn intRange(min: i32, max: i32) i32 {
     return prng.random().intRangeAtMost(i32, min, max);
 }
 
-pub fn floatRange(min: f32, max: f32) f32 {
+pub fn floatRange(min: f64, max: f64) f64 {
     return min + (max - min) * float();
 }
 
@@ -19,7 +19,7 @@ pub fn vec() Vec3 {
     return Vec3.init(float(), float(), float());
 }
 
-pub fn vecRange(min: f32, max: f32) Vec3 {
+pub fn vecRange(min: f64, max: f64) Vec3 {
     return Vec3.init(floatRange(min, max), floatRange(min, max), floatRange(min, max));
 }
 

@@ -2,7 +2,7 @@ const Interval = @import("interval.zig").Interval;
 const Vec3 = @import("color.zig").Vec3;
 const Ray = @import("ray.zig").Ray;
 
-fn axisComponent(v: Vec3, axis: u8) f32 {
+fn axisComponent(v: Vec3, axis: u8) f64 {
     return switch (axis) {
         0 => v.x,
         1 => v.y,
@@ -49,7 +49,7 @@ pub const Aabb = struct {
     }
 
     fn padToMinimums(self: *Aabb) void {
-        const delta: f32 = 0.01;
+        const delta: f64 = 0.0001;
         if (self.x.size() < delta) self.x = self.x.expand(delta);
         if (self.y.size() < delta) self.y = self.y.expand(delta);
         if (self.z.size() < delta) self.z = self.z.expand(delta);

@@ -9,11 +9,11 @@ const HitRecord = hittable_mod.HitRecord;
 
 pub const RotateY = struct {
     object: *Hittable,
-    sin_theta: f32,
-    cos_theta: f32,
+    sin_theta: f64,
+    cos_theta: f64,
     bbox: Aabb,
 
-    pub fn create(allocator: std.mem.Allocator, object: Hittable, angle_degrees: f32) !*RotateY {
+    pub fn create(allocator: std.mem.Allocator, object: Hittable, angle_degrees: f64) !*RotateY {
         const obj_ptr = try allocator.create(Hittable);
         obj_ptr.* = object;
         const radians = std.math.degreesToRadians(angle_degrees);
@@ -21,15 +21,15 @@ pub const RotateY = struct {
         const cos_t = @cos(radians);
         const orig_bbox = obj_ptr.boundingBox();
 
-        var min_pt = Vec3.init(std.math.inf(f32), std.math.inf(f32), std.math.inf(f32));
-        var max_pt = Vec3.init(-std.math.inf(f32), -std.math.inf(f32), -std.math.inf(f32));
+        var min_pt = Vec3.init(std.math.inf(f64), std.math.inf(f64), std.math.inf(f64));
+        var max_pt = Vec3.init(-std.math.inf(f64), -std.math.inf(f64), -std.math.inf(f64));
 
         for (0..2) |i| {
             for (0..2) |j| {
                 for (0..2) |k| {
-                    const fi: f32 = @floatFromInt(i);
-                    const fj: f32 = @floatFromInt(j);
-                    const fk: f32 = @floatFromInt(k);
+                    const fi: f64 = @floatFromInt(i);
+                    const fj: f64 = @floatFromInt(j);
+                    const fk: f64 = @floatFromInt(k);
                     const x = fi * orig_bbox.x.max + (1.0 - fi) * orig_bbox.x.min;
                     const y = fj * orig_bbox.y.max + (1.0 - fj) * orig_bbox.y.min;
                     const z = fk * orig_bbox.z.max + (1.0 - fk) * orig_bbox.z.min;

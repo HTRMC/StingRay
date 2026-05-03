@@ -19,7 +19,7 @@ pub const Perlin = struct {
         return self;
     }
 
-    pub fn noise(self: Perlin, p: Vec3) f32 {
+    pub fn noise(self: Perlin, p: Vec3) f64 {
         var u = p.x - @floor(p.x);
         var v = p.y - @floor(p.y);
         var w = p.z - @floor(p.z);
@@ -46,10 +46,10 @@ pub const Perlin = struct {
         return perlinInterp(c, u, v, w);
     }
 
-    pub fn turb(self: Perlin, p: Vec3, depth: u32) f32 {
-        var accum: f32 = 0.0;
+    pub fn turb(self: Perlin, p: Vec3, depth: u32) f64 {
+        var accum: f64 = 0.0;
         var temp_p = p;
-        var weight: f32 = 1.0;
+        var weight: f64 = 1.0;
         var i: u32 = 0;
         while (i < depth) : (i += 1) {
             accum += weight * self.noise(temp_p);
@@ -64,17 +64,17 @@ pub const Perlin = struct {
         return low;
     }
 
-    fn perlinInterp(c: [2][2][2]Vec3, u: f32, v: f32, w: f32) f32 {
+    fn perlinInterp(c: [2][2][2]Vec3, u: f64, v: f64, w: f64) f64 {
         const uu = u * u * (3.0 - 2.0 * u);
         const vv = v * v * (3.0 - 2.0 * v);
         const ww = w * w * (3.0 - 2.0 * w);
-        var accum: f32 = 0.0;
+        var accum: f64 = 0.0;
         for (0..2) |i| {
             for (0..2) |j| {
                 for (0..2) |k| {
-                    const fi: f32 = @floatFromInt(i);
-                    const fj: f32 = @floatFromInt(j);
-                    const fk: f32 = @floatFromInt(k);
+                    const fi: f64 = @floatFromInt(i);
+                    const fj: f64 = @floatFromInt(j);
+                    const fk: f64 = @floatFromInt(k);
                     const weight = Vec3.init(u - fi, v - fj, w - fk);
                     accum += (fi * uu + (1.0 - fi) * (1.0 - uu)) *
                         (fj * vv + (1.0 - fj) * (1.0 - vv)) *

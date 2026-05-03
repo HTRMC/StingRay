@@ -66,12 +66,12 @@ fn finalScene(
     while (i < boxes_per_side) : (i += 1) {
         var j: i32 = 0;
         while (j < boxes_per_side) : (j += 1) {
-            const w: f32 = 100.0;
-            const fi: f32 = @floatFromInt(i);
-            const fj: f32 = @floatFromInt(j);
+            const w: f64 = 100.0;
+            const fi: f64 = @floatFromInt(i);
+            const fj: f64 = @floatFromInt(j);
             const x0 = -1000.0 + fi * w;
             const z0 = -1000.0 + fj * w;
-            const y0: f32 = 0.0;
+            const y0: f64 = 0.0;
             const x1 = x0 + w;
             const y1 = random.floatRange(1, 101);
             const z1 = z0 + w;
@@ -363,8 +363,8 @@ fn bouncingSpheres(stdout: anytype, stderr: anytype) !void {
         var b: i32 = -11;
         while (b < 11) : (b += 1) {
             const choose_mat = random.float();
-            const af: f32 = @floatFromInt(a);
-            const bf: f32 = @floatFromInt(b);
+            const af: f64 = @floatFromInt(a);
+            const bf: f64 = @floatFromInt(b);
             const center = Vec3.init(af + 0.9 * random.float(), 0.2, bf + 0.9 * random.float());
 
             if (center.sub(Vec3.init(4, 0.2, 0)).length() <= 0.9) continue;

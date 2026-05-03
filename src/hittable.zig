@@ -15,9 +15,9 @@ const HittableList = @import("hittable_list.zig").HittableList;
 pub const HitRecord = struct {
     point: Vec3,
     normal: Vec3,
-    hit_t: f32,
-    u: f32 = 0,
-    v: f32 = 0,
+    hit_t: f64,
+    u: f64 = 0,
+    v: f64 = 0,
     front_face: bool,
     material: Material = .none,
 
@@ -50,7 +50,7 @@ pub const Hittable = union(enum) {
         };
     }
 
-    pub fn pdfValue(self: Hittable, origin: Vec3, direction: Vec3) f32 {
+    pub fn pdfValue(self: Hittable, origin: Vec3, direction: Vec3) f64 {
         return switch (self) {
             .quad => |q| q.pdfValue(origin, direction),
             .sphere => |s| s.pdfValue(origin, direction),
