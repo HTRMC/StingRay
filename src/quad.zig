@@ -48,10 +48,25 @@ pub const Quad = struct {
         const t = (self.D - self.normal.dot(ray.origin())) / denom;
         if (!ray_t.contains(t)) return false;
 
+        const intersection = ray.at(t);
+        const planar_hitpt = intersection.sub(self.Q);
+        const alpha = self.w.dot(planar_hitpt.cross(self.v));
+        const beta = self.w.dot(self.u.cross(planar_hitpt));
+
+        if (!isInterior(alpha, beta, record)) return false;
+
         record.hit_t = t;
-        record.point = ray.at(t);
+        record.point = intersection;
         record.material = self.material;
         record.setFaceNormal(ray, self.normal);
+        return true;
+    }
+
+    fn isInterior(a: f32, b: f32, record: *HitRecord) bool {
+        const unit_int = Interval.init(0, 1);
+        if (!unit_int.contains(a) or !unit_int.contains(b)) return false;
+        record.u = a;
+        record.v = b;
         return true;
     }
 };

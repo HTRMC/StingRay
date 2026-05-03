@@ -3,6 +3,7 @@ const color_mod = @import("color.zig");
 const Vec3 = color_mod.Vec3;
 const Color = color_mod.Color;
 const Sphere = @import("sphere.zig").Sphere;
+const Quad = @import("quad.zig").Quad;
 const Hittable = @import("hittable.zig").Hittable;
 const HittableList = @import("hittable_list.zig").HittableList;
 const Camera = @import("camera.zig").Camera;
@@ -19,8 +20,8 @@ const Image = @import("image.zig").Image;
 const Perlin = @import("perlin.zig").Perlin;
 const random = @import("random.zig");
 
-const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres };
-const selected_scene: Scene = .perlin_spheres;
+const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads };
+const selected_scene: Scene = .quads;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -34,7 +35,39 @@ pub fn main(init: std.process.Init) !void {
         .checkered_spheres => try checkeredSpheres(stdout, stderr),
         .earth => try earth(stdout, stderr),
         .perlin_spheres => try perlinSpheres(stdout, stderr),
+        .quads => try quads(stdout, stderr),
     }
+}
+
+fn quads(stdout: anytype, stderr: anytype) !void {
+    const allocator = std.heap.page_allocator;
+    var world = HittableList.init(allocator);
+    defer world.deinit();
+
+    const left_red: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(1.0, 0.2, 0.2)) };
+    const back_green: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.2, 1.0, 0.2)) };
+    const right_blue: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.2, 0.2, 1.0)) };
+    const upper_orange: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(1.0, 0.5, 0.0)) };
+    const lower_teal: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.2, 0.8, 0.8)) };
+
+    try world.add(.{ .quad = Quad.init(Vec3.init(-3, -2, 5), Vec3.init(0, 0, -4), Vec3.init(0, 4, 0), left_red) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(-2, -2, 0), Vec3.init(4, 0, 0), Vec3.init(0, 4, 0), back_green) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(3, -2, 1), Vec3.init(0, 0, 4), Vec3.init(0, 4, 0), right_blue) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(-2, 3, 1), Vec3.init(4, 0, 0), Vec3.init(0, 0, 4), upper_orange) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(-2, -3, 5), Vec3.init(4, 0, 0), Vec3.init(0, 0, -4), lower_teal) });
+
+    var cam: Camera = .{};
+    cam.aspect_ratio = 1.0;
+    cam.image_width = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth = 50;
+    cam.vfov = 80;
+    cam.lookfrom = Vec3.init(0, 0, 9);
+    cam.lookat = Vec3.init(0, 0, 0);
+    cam.vup = Vec3.init(0, 1, 0);
+    cam.defocus_angle = 0;
+
+    try cam.render(world, stdout, stderr);
 }
 
 fn perlinSpheres(stdout: anytype, stderr: anytype) !void {
