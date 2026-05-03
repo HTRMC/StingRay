@@ -141,8 +141,25 @@ pub const Camera = struct {
             return color_from_emission;
         }
 
+        const on_light = Vec3.init(
+            random.floatRange(213, 343),
+            554,
+            random.floatRange(227, 332),
+        );
+        const to_light_raw = on_light.sub(record.point);
+        const distance_squared = to_light_raw.dot(to_light_raw);
+        const to_light = to_light_raw.normalize();
+
+        if (to_light.dot(record.normal) < 0) return color_from_emission;
+
+        const light_area: f32 = (343 - 213) * (332 - 227);
+        const light_cosine = @abs(to_light.y);
+        if (light_cosine < 0.000001) return color_from_emission;
+
+        const pdf_value = distance_squared / (light_cosine * light_area);
+        scattered = Ray.initTimed(record.point, to_light, ray.time());
+
         const scattering_pdf = record.material.scatteringPdf(ray, record, scattered);
-        const pdf_value = scattering_pdf;
 
         const incoming = self.rayColor(scattered, depth - 1, world);
         const color_from_scatter = color_mod.hadamard(attenuation, incoming).scale(scattering_pdf / pdf_value);
