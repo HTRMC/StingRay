@@ -46,6 +46,19 @@ pub const Perlin = struct {
         return perlinInterp(c, u, v, w);
     }
 
+    pub fn turb(self: Perlin, p: Vec3, depth: u32) f32 {
+        var accum: f32 = 0.0;
+        var temp_p = p;
+        var weight: f32 = 1.0;
+        var i: u32 = 0;
+        while (i < depth) : (i += 1) {
+            accum += weight * self.noise(temp_p);
+            weight *= 0.5;
+            temp_p = temp_p.scale(2.0);
+        }
+        return @abs(accum);
+    }
+
     fn wrapByte(value: i32) usize {
         const low: u8 = @truncate(@as(u32, @bitCast(value)));
         return low;
