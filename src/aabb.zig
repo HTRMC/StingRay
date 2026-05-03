@@ -40,6 +40,14 @@ pub const Aabb = struct {
         };
     }
 
+    pub fn offset(self: Aabb, v: Vec3) Aabb {
+        return .{
+            .x = self.x.shift(v.x),
+            .y = self.y.shift(v.y),
+            .z = self.z.shift(v.z),
+        };
+    }
+
     fn padToMinimums(self: *Aabb) void {
         const delta: f32 = 0.0001;
         if (self.x.size() < delta) self.x = self.x.expand(delta);

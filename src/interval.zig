@@ -40,4 +40,8 @@ pub const Interval = struct {
         const padding = delta / 2.0;
         return .{ .min = self.min - padding, .max = self.max + padding };
     }
+
+    pub fn shift(self: Interval, displacement: f32) Interval {
+        return .{ .min = self.min + displacement, .max = self.max + displacement };
+    }
 };
