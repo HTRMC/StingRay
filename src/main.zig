@@ -20,8 +20,8 @@ const Image = @import("image.zig").Image;
 const Perlin = @import("perlin.zig").Perlin;
 const random = @import("random.zig");
 
-const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads, simple_light };
-const selected_scene: Scene = .simple_light;
+const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads, simple_light, cornell_box };
+const selected_scene: Scene = .cornell_box;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -37,7 +37,40 @@ pub fn main(init: std.process.Init) !void {
         .perlin_spheres => try perlinSpheres(stdout, stderr),
         .quads => try quads(stdout, stderr),
         .simple_light => try simpleLight(stdout, stderr),
+        .cornell_box => try cornellBox(stdout, stderr),
     }
+}
+
+fn cornellBox(stdout: anytype, stderr: anytype) !void {
+    const allocator = std.heap.page_allocator;
+    var world = HittableList.init(allocator);
+    defer world.deinit();
+
+    const red: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.65, 0.05, 0.05)) };
+    const white: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.73, 0.73, 0.73)) };
+    const green: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.12, 0.45, 0.15)) };
+    const light: Material = .{ .diffuse_light = material_mod.DiffuseLight.fromColor(Color.init(15, 15, 15)) };
+
+    try world.add(.{ .quad = Quad.init(Vec3.init(555, 0, 0), Vec3.init(0, 555, 0), Vec3.init(0, 0, 555), green) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 0), Vec3.init(0, 555, 0), Vec3.init(0, 0, 555), red) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(343, 554, 332), Vec3.init(-130, 0, 0), Vec3.init(0, 0, -105), light) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 0), Vec3.init(555, 0, 0), Vec3.init(0, 0, 555), white) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(555, 555, 555), Vec3.init(-555, 0, 0), Vec3.init(0, 0, -555), white) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(0, 0, 555), Vec3.init(555, 0, 0), Vec3.init(0, 555, 0), white) });
+
+    var cam: Camera = .{};
+    cam.aspect_ratio = 1.0;
+    cam.image_width = 600;
+    cam.samples_per_pixel = 200;
+    cam.max_depth = 50;
+    cam.background = Color.init(0, 0, 0);
+    cam.vfov = 40;
+    cam.lookfrom = Vec3.init(278, 278, -800);
+    cam.lookat = Vec3.init(278, 278, 0);
+    cam.vup = Vec3.init(0, 1, 0);
+    cam.defocus_angle = 0;
+
+    try cam.render(world, stdout, stderr);
 }
 
 fn simpleLight(stdout: anytype, stderr: anytype) !void {
