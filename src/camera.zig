@@ -141,7 +141,11 @@ pub const Camera = struct {
             return color_from_emission;
         }
 
-        const color_from_scatter = color_mod.hadamard(attenuation, self.rayColor(scattered, depth - 1, world));
+        const scattering_pdf = record.material.scatteringPdf(ray, record, scattered);
+        const pdf_value = scattering_pdf;
+
+        const incoming = self.rayColor(scattered, depth - 1, world);
+        const color_from_scatter = color_mod.hadamard(attenuation, incoming).scale(scattering_pdf / pdf_value);
         return color_from_emission.add(color_from_scatter);
     }
 };

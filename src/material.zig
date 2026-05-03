@@ -38,6 +38,13 @@ pub const Lambertian = struct {
         attenuation.* = self.tex.value(record.u, record.v, record.point);
         return true;
     }
+
+    pub fn scatteringPdf(self: Lambertian, ray_in: Ray, record: HitRecord, scattered: Ray) f32 {
+        _ = self;
+        _ = ray_in;
+        const cos_theta = record.normal.dot(scattered.direction().normalize());
+        return if (cos_theta < 0) 0 else cos_theta / std.math.pi;
+    }
 };
 
 pub const Metal = struct {
@@ -175,6 +182,13 @@ pub const Material = union(enum) {
         return switch (self) {
             .diffuse_light => |light| light.emitted(u, v, p),
             else => Color.init(0, 0, 0),
+        };
+    }
+
+    pub fn scatteringPdf(self: Material, ray_in: Ray, record: HitRecord, scattered: Ray) f32 {
+        return switch (self) {
+            .lambertian => |lamb| lamb.scatteringPdf(ray_in, record, scattered),
+            else => 0,
         };
     }
 };
