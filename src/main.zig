@@ -25,7 +25,7 @@ const Perlin = @import("perlin.zig").Perlin;
 const random = @import("random.zig");
 
 const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads, simple_light, cornell_box, cornell_smoke, final_scene };
-const selected_scene: Scene = .final_scene;
+const selected_scene: Scene = .cornell_box;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -222,7 +222,7 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     var cam: Camera = .{};
     cam.aspect_ratio = 1.0;
     cam.image_width = 600;
-    cam.samples_per_pixel = 200;
+    cam.samples_per_pixel = 1000;
     cam.max_depth = 50;
     cam.background = Color.init(0, 0, 0);
     cam.vfov = 40;
