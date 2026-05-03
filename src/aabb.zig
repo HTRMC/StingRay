@@ -28,6 +28,14 @@ pub const Aabb = struct {
         return .{ .x = x, .y = y, .z = z };
     }
 
+    pub fn fromBoxes(a: Aabb, b: Aabb) Aabb {
+        return .{
+            .x = Interval.enclose(a.x, b.x),
+            .y = Interval.enclose(a.y, b.y),
+            .z = Interval.enclose(a.z, b.z),
+        };
+    }
+
     pub fn axisInterval(self: Aabb, axis: u8) Interval {
         return switch (axis) {
             1 => self.y,

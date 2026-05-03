@@ -3,6 +3,7 @@ const Ray = @import("ray.zig").Ray;
 const Interval = @import("interval.zig").Interval;
 const Sphere = @import("sphere.zig").Sphere;
 const Material = @import("material.zig").Material;
+const Aabb = @import("aabb.zig").Aabb;
 
 pub const HitRecord = struct {
     point: Vec3,
@@ -23,6 +24,12 @@ pub const Hittable = union(enum) {
     pub fn hit(self: Hittable, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
         return switch (self) {
             inline else => |obj| obj.hit(ray, ray_t, record),
+        };
+    }
+
+    pub fn boundingBox(self: Hittable) Aabb {
+        return switch (self) {
+            inline else => |obj| obj.boundingBox(),
         };
     }
 };

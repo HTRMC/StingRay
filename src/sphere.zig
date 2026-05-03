@@ -3,26 +3,41 @@ const Ray = @import("ray.zig").Ray;
 const HitRecord = @import("hittable.zig").HitRecord;
 const Interval = @import("interval.zig").Interval;
 const Material = @import("material.zig").Material;
+const Aabb = @import("aabb.zig").Aabb;
 
 pub const Sphere = struct {
     center: Ray,
     radius: f32,
     material: Material = .none,
+    bbox: Aabb,
 
     pub fn init(static_center: Vec3, radius: f32, material: Material) Sphere {
+        const r = @max(0, radius);
+        const rvec = Vec3.init(r, r, r);
         return .{
             .center = Ray.init(static_center, Vec3.init(0, 0, 0)),
-            .radius = @max(0, radius),
+            .radius = r,
             .material = material,
+            .bbox = Aabb.fromPoints(static_center.sub(rvec), static_center.add(rvec)),
         };
     }
 
     pub fn initMoving(center1: Vec3, center2: Vec3, radius: f32, material: Material) Sphere {
+        const r = @max(0, radius);
+        const rvec = Vec3.init(r, r, r);
+        const center = Ray.init(center1, center2.sub(center1));
+        const box1 = Aabb.fromPoints(center.at(0).sub(rvec), center.at(0).add(rvec));
+        const box2 = Aabb.fromPoints(center.at(1).sub(rvec), center.at(1).add(rvec));
         return .{
-            .center = Ray.init(center1, center2.sub(center1)),
-            .radius = @max(0, radius),
+            .center = center,
+            .radius = r,
             .material = material,
+            .bbox = Aabb.fromBoxes(box1, box2),
         };
+    }
+
+    pub fn boundingBox(self: Sphere) Aabb {
+        return self.bbox;
     }
 
     pub fn hit(self: Sphere, ray: Ray, ray_t: Interval, record: *HitRecord) bool {

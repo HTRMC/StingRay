@@ -11,6 +11,13 @@ pub const Interval = struct {
         return .{ .min = min, .max = max };
     }
 
+    pub fn enclose(a: Interval, b: Interval) Interval {
+        return .{
+            .min = if (a.min <= b.min) a.min else b.min,
+            .max = if (a.max >= b.max) a.max else b.max,
+        };
+    }
+
     pub fn size(self: Interval) f32 {
         return self.max - self.min;
     }
