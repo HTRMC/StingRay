@@ -51,10 +51,29 @@ pub const HittablePdf = struct {
     }
 };
 
+pub const MixturePdf = struct {
+    p0: *const Pdf,
+    p1: *const Pdf,
+
+    pub fn init(p0: *const Pdf, p1: *const Pdf) MixturePdf {
+        return .{ .p0 = p0, .p1 = p1 };
+    }
+
+    pub fn value(self: MixturePdf, direction: Vec3) f32 {
+        return 0.5 * self.p0.value(direction) + 0.5 * self.p1.value(direction);
+    }
+
+    pub fn generate(self: MixturePdf) Vec3 {
+        if (random.float() < 0.5) return self.p0.generate();
+        return self.p1.generate();
+    }
+};
+
 pub const Pdf = union(enum) {
     sphere: SpherePdf,
     cosine: CosinePdf,
     hittable: HittablePdf,
+    mixture: MixturePdf,
 
     pub fn value(self: Pdf, direction: Vec3) f32 {
         return switch (self) {

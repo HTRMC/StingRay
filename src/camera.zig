@@ -13,6 +13,7 @@ const pdf_mod = @import("pdf.zig");
 const Pdf = pdf_mod.Pdf;
 const CosinePdf = pdf_mod.CosinePdf;
 const HittablePdf = pdf_mod.HittablePdf;
+const MixturePdf = pdf_mod.MixturePdf;
 
 pub const Camera = struct {
     aspect_ratio: f32 = 1.0,
@@ -146,10 +147,12 @@ pub const Camera = struct {
             return color_from_emission;
         }
 
-        const sampling_pdf: Pdf = if (lights) |light_obj|
-            .{ .hittable = HittablePdf.init(light_obj, record.point) }
-        else
-            .{ .cosine = CosinePdf.init(record.normal) };
+        const cosine_pdf: Pdf = .{ .cosine = CosinePdf.init(record.normal) };
+        var light_pdf: Pdf = undefined;
+        const sampling_pdf: Pdf = if (lights) |light_obj| blk: {
+            light_pdf = .{ .hittable = HittablePdf.init(light_obj, record.point) };
+            break :blk .{ .mixture = MixturePdf.init(&light_pdf, &cosine_pdf) };
+        } else cosine_pdf;
 
         scattered = Ray.initTimed(record.point, sampling_pdf.generate(), ray.time());
         const pdf_value = sampling_pdf.value(scattered.direction());
