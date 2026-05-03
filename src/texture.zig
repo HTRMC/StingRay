@@ -2,6 +2,8 @@ const std = @import("std");
 const color_mod = @import("color.zig");
 const Color = color_mod.Color;
 const Vec3 = color_mod.Vec3;
+const Image = @import("image.zig").Image;
+const Interval = @import("interval.zig").Interval;
 
 pub const SolidColor = struct {
     albedo: Color,
@@ -36,9 +38,40 @@ pub const Checker = struct {
     }
 };
 
+pub const ImageTexture = struct {
+    image: *const Image,
+
+    pub fn init(image: *const Image) ImageTexture {
+        return .{ .image = image };
+    }
+
+    pub fn value(self: ImageTexture, u: f32, v: f32, p: Vec3) Color {
+        _ = p;
+        if (self.image.height <= 0) return Color.init(0, 1, 1);
+
+        const unit = Interval.init(0, 1);
+        const u_clamped = unit.clamp(u);
+        const v_clamped = 1.0 - unit.clamp(v);
+
+        const w_f: f32 = @floatFromInt(self.image.width);
+        const h_f: f32 = @floatFromInt(self.image.height);
+        const i: i32 = @intFromFloat(u_clamped * w_f);
+        const j: i32 = @intFromFloat(v_clamped * h_f);
+        const px = self.image.pixel(i, j);
+
+        const scale_byte = 1.0 / 255.0;
+        return Color.init(
+            @as(f32, @floatFromInt(px[0])) * scale_byte,
+            @as(f32, @floatFromInt(px[1])) * scale_byte,
+            @as(f32, @floatFromInt(px[2])) * scale_byte,
+        );
+    }
+};
+
 pub const Texture = union(enum) {
     solid: SolidColor,
     checker: Checker,
+    image: ImageTexture,
 
     pub fn fromColor(albedo: Color) Texture {
         return .{ .solid = SolidColor.init(albedo) };

@@ -13,8 +13,14 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
     });
     exe_mod.addImport("zlm", zlm.module("zlm"));
+    exe_mod.addIncludePath(b.path("vendor"));
+    exe_mod.addCSourceFile(.{
+        .file = b.path("src/stb_impl.c"),
+        .flags = &.{},
+    });
 
     const exe = b.addExecutable(.{
         .name = "StingRay",
@@ -22,6 +28,10 @@ pub fn build(b: *std.Build) void {
     });
 
     b.installArtifact(exe);
+
+    const asm_step = b.step("asm", "Emit assembly");
+    const asm_install = b.addInstallFile(exe.getEmittedAsm(), "StingRay.s");
+    asm_step.dependOn(&asm_install.step);
 
     const run_step = b.step("run", "Run the app");
 

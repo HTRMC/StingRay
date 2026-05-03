@@ -5,13 +5,13 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .zlm = .{
-            .url = "git+https://github.com/HTRMC/zlm#16731f378721ef3487ca0695c22b07132e0ba2ff",
-            .hash = "zlm-0.3.0-kTeHg2trAQD2piveSS7-m31iH9BSoZ-C1T6b0Xp33Eyp",
+            .path = "zig-pkg/zlm-0.3.0-kTeHg2trAQD2piveSS7-m31iH9BSoZ-C1T6b0Xp33Eyp",
         },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src",
+        "vendor",
     },
 }
