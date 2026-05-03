@@ -17,15 +17,19 @@ pub const Aabb = struct {
     z: Interval = Interval.empty,
 
     pub fn fromPoints(a: Vec3, b: Vec3) Aabb {
-        return .{
+        var box: Aabb = .{
             .x = if (a.x <= b.x) Interval.init(a.x, b.x) else Interval.init(b.x, a.x),
             .y = if (a.y <= b.y) Interval.init(a.y, b.y) else Interval.init(b.y, a.y),
             .z = if (a.z <= b.z) Interval.init(a.z, b.z) else Interval.init(b.z, a.z),
         };
+        box.padToMinimums();
+        return box;
     }
 
     pub fn fromIntervals(x: Interval, y: Interval, z: Interval) Aabb {
-        return .{ .x = x, .y = y, .z = z };
+        var box: Aabb = .{ .x = x, .y = y, .z = z };
+        box.padToMinimums();
+        return box;
     }
 
     pub fn fromBoxes(a: Aabb, b: Aabb) Aabb {
@@ -34,6 +38,13 @@ pub const Aabb = struct {
             .y = Interval.enclose(a.y, b.y),
             .z = Interval.enclose(a.z, b.z),
         };
+    }
+
+    fn padToMinimums(self: *Aabb) void {
+        const delta: f32 = 0.0001;
+        if (self.x.size() < delta) self.x = self.x.expand(delta);
+        if (self.y.size() < delta) self.y = self.y.expand(delta);
+        if (self.z.size() < delta) self.z = self.z.expand(delta);
     }
 
     pub fn axisInterval(self: Aabb, axis: u8) Interval {
