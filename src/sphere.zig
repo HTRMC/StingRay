@@ -1,3 +1,4 @@
+const std = @import("std");
 const Vec3 = @import("color.zig").Vec3;
 const Ray = @import("ray.zig").Ray;
 const HitRecord = @import("hittable.zig").HitRecord;
@@ -62,7 +63,19 @@ pub const Sphere = struct {
         record.point = ray.at(root);
         const outward_normal = record.point.sub(current_center).scale(1.0 / self.radius);
         record.setFaceNormal(ray, outward_normal);
+        const uv = getSphereUv(outward_normal);
+        record.u = uv.u;
+        record.v = uv.v;
         record.material = self.material;
         return true;
+    }
+
+    fn getSphereUv(p: Vec3) struct { u: f32, v: f32 } {
+        const theta = std.math.acos(-p.y);
+        const phi = std.math.atan2(-p.z, p.x) + std.math.pi;
+        return .{
+            .u = phi / (2.0 * std.math.pi),
+            .v = theta / std.math.pi,
+        };
     }
 };
