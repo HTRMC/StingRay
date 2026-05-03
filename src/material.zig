@@ -23,10 +23,9 @@ pub const Lambertian = struct {
         attenuation: *Color,
         scattered: *Ray,
     ) bool {
-        _ = ray_in;
         var direction = record.normal.add(random.unitVector());
         if (color_mod.nearZero(direction)) direction = record.normal;
-        scattered.* = Ray.init(record.point, direction);
+        scattered.* = Ray.initTimed(record.point, direction, ray_in.time());
         attenuation.* = self.albedo;
         return true;
     }
@@ -49,7 +48,7 @@ pub const Metal = struct {
     ) bool {
         const reflected = ray_in.direction().reflect(record.normal).normalize()
             .add(random.unitVector().scale(self.fuzz));
-        scattered.* = Ray.init(record.point, reflected);
+        scattered.* = Ray.initTimed(record.point, reflected, ray_in.time());
         attenuation.* = self.albedo;
         return reflected.dot(record.normal) > 0;
     }
@@ -76,7 +75,7 @@ pub const Dielectric = struct {
             unit_direction.reflect(record.normal)
         else
             refract(unit_direction, record.normal, ri);
-        scattered.* = Ray.init(record.point, direction);
+        scattered.* = Ray.initTimed(record.point, direction, ray_in.time());
         return true;
     }
 
