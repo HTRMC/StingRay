@@ -144,7 +144,7 @@ fn finalScene(
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
 
-    try cam.render(world, stdout, stderr);
+    try cam.render(world, null, stdout, stderr);
 }
 
 fn cornellSmoke(stdout: anytype, stderr: anytype) !void {
@@ -188,7 +188,7 @@ fn cornellSmoke(stdout: anytype, stderr: anytype) !void {
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
 
-    try cam.render(world, stdout, stderr);
+    try cam.render(world, null, stdout, stderr);
 }
 
 fn cornellBox(stdout: anytype, stderr: anytype) !void {
@@ -219,6 +219,8 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     const box2_trans = try Translate.create(allocator2, .{ .rotate_y = box2_rot }, Vec3.init(130, 0, 65));
     try world.add(.{ .translate = box2_trans });
 
+    const lights_quad: Hittable = .{ .quad = Quad.init(Vec3.init(343, 554, 332), Vec3.init(-130, 0, 0), Vec3.init(0, 0, -105), .none) };
+
     var cam: Camera = .{};
     cam.aspect_ratio = 1.0;
     cam.image_width = 600;
@@ -231,7 +233,7 @@ fn cornellBox(stdout: anytype, stderr: anytype) !void {
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
 
-    try cam.render(world, stdout, stderr);
+    try cam.render(world, &lights_quad, stdout, stderr);
 }
 
 fn addBoxQuads(world: *HittableList, a: Vec3, b: Vec3, mat: Material) !void {
@@ -284,7 +286,7 @@ fn simpleLight(stdout: anytype, stderr: anytype) !void {
     cam.vup = Vec3.init(0, 1, 0);
     cam.defocus_angle = 0;
 
-    try cam.render(world, stdout, stderr);
+    try cam.render(world, null, stdout, stderr);
 }
 
 fn quads(stdout: anytype, stderr: anytype) !void {
@@ -316,7 +318,7 @@ fn quads(stdout: anytype, stderr: anytype) !void {
     cam.defocus_angle = 0;
     cam.background = Color.init(0.70, 0.80, 1.00);
 
-    try cam.render(world, stdout, stderr);
+    try cam.render(world, null, stdout, stderr);
 }
 
 fn perlinSpheres(stdout: anytype, stderr: anytype) !void {
@@ -344,7 +346,7 @@ fn perlinSpheres(stdout: anytype, stderr: anytype) !void {
     cam.defocus_angle = 0;
     cam.background = Color.init(0.70, 0.80, 1.00);
 
-    try cam.render(world, stdout, stderr);
+    try cam.render(world, null, stdout, stderr);
 }
 
 fn bouncingSpheres(stdout: anytype, stderr: anytype) !void {
@@ -408,7 +410,7 @@ fn bouncingSpheres(stdout: anytype, stderr: anytype) !void {
     cam.focus_dist = 10.0;
     cam.background = Color.init(0.70, 0.80, 1.00);
 
-    try cam.render(world, stdout, stderr);
+    try cam.render(world, null, stdout, stderr);
 }
 
 fn earth(stdout: anytype, stderr: anytype) !void {
@@ -435,7 +437,7 @@ fn earth(stdout: anytype, stderr: anytype) !void {
     cam.defocus_angle = 0;
     cam.background = Color.init(0.70, 0.80, 1.00);
 
-    try cam.render(world, stdout, stderr);
+    try cam.render(world, null, stdout, stderr);
 }
 
 fn checkeredSpheres(stdout: anytype, stderr: anytype) !void {
@@ -465,5 +467,5 @@ fn checkeredSpheres(stdout: anytype, stderr: anytype) !void {
     cam.defocus_angle = 0;
     cam.background = Color.init(0.70, 0.80, 1.00);
 
-    try cam.render(world, stdout, stderr);
+    try cam.render(world, null, stdout, stderr);
 }

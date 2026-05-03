@@ -45,4 +45,18 @@ pub const Hittable = union(enum) {
             inline else => |obj| obj.boundingBox(),
         };
     }
+
+    pub fn pdfValue(self: Hittable, origin: Vec3, direction: Vec3) f32 {
+        return switch (self) {
+            .quad => |q| q.pdfValue(origin, direction),
+            else => 0,
+        };
+    }
+
+    pub fn randomToward(self: Hittable, origin: Vec3) Vec3 {
+        return switch (self) {
+            .quad => |q| q.randomToward(origin),
+            else => Vec3.init(1, 0, 0),
+        };
+    }
 };

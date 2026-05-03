@@ -2,6 +2,7 @@ const std = @import("std");
 const Vec3 = @import("color.zig").Vec3;
 const Onb = @import("onb.zig").Onb;
 const random = @import("random.zig");
+const Hittable = @import("hittable.zig").Hittable;
 
 pub const SpherePdf = struct {
     pub fn value(self: SpherePdf, direction: Vec3) f32 {
@@ -33,9 +34,27 @@ pub const CosinePdf = struct {
     }
 };
 
+pub const HittablePdf = struct {
+    object: *const Hittable,
+    origin: Vec3,
+
+    pub fn init(object: *const Hittable, origin: Vec3) HittablePdf {
+        return .{ .object = object, .origin = origin };
+    }
+
+    pub fn value(self: HittablePdf, direction: Vec3) f32 {
+        return self.object.pdfValue(self.origin, direction);
+    }
+
+    pub fn generate(self: HittablePdf) Vec3 {
+        return self.object.randomToward(self.origin);
+    }
+};
+
 pub const Pdf = union(enum) {
     sphere: SpherePdf,
     cosine: CosinePdf,
+    hittable: HittablePdf,
 
     pub fn value(self: Pdf, direction: Vec3) f32 {
         return switch (self) {

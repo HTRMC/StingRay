@@ -8,9 +8,11 @@ const HitRecord = @import("hittable.zig").HitRecord;
 const HittableList = @import("hittable_list.zig").HittableList;
 const Interval = @import("interval.zig").Interval;
 const random = @import("random.zig");
+const Hittable = @import("hittable.zig").Hittable;
 const pdf_mod = @import("pdf.zig");
 const Pdf = pdf_mod.Pdf;
 const CosinePdf = pdf_mod.CosinePdf;
+const HittablePdf = pdf_mod.HittablePdf;
 
 pub const Camera = struct {
     aspect_ratio: f32 = 1.0,
@@ -39,7 +41,7 @@ pub const Camera = struct {
     defocus_disk_u: Vec3 = undefined,
     defocus_disk_v: Vec3 = undefined,
 
-    pub fn render(self: *Camera, world: HittableList, stdout: anytype, stderr: anytype) !void {
+    pub fn render(self: *Camera, world: HittableList, lights: ?*const Hittable, stdout: anytype, stderr: anytype) !void {
         self.initialize();
 
         try stdout.print("P3\n{} {}\n255\n", .{ self.image_width, self.image_height });
@@ -53,7 +55,7 @@ pub const Camera = struct {
                     var s_i: u32 = 0;
                     while (s_i < self.sqrt_spp) : (s_i += 1) {
                         const ray = self.getRay(@intCast(i), @intCast(j), s_i, s_j);
-                        pixel_color = pixel_color.add(self.rayColor(ray, self.max_depth, world));
+                        pixel_color = pixel_color.add(self.rayColor(ray, self.max_depth, world, lights));
                     }
                 }
                 try write_color(stdout, pixel_color.scale(self.pixel_samples_scale));
@@ -128,7 +130,7 @@ pub const Camera = struct {
         return self.center.add(self.defocus_disk_u.scale(p.x)).add(self.defocus_disk_v.scale(p.y));
     }
 
-    fn rayColor(self: *const Camera, ray: Ray, depth: u32, world: HittableList) Color {
+    fn rayColor(self: *const Camera, ray: Ray, depth: u32, world: HittableList, lights: ?*const Hittable) Color {
         if (depth == 0) return Color.init(0, 0, 0);
 
         var record: HitRecord = undefined;
@@ -144,13 +146,17 @@ pub const Camera = struct {
             return color_from_emission;
         }
 
-        const surface_pdf: Pdf = .{ .cosine = CosinePdf.init(record.normal) };
-        scattered = Ray.initTimed(record.point, surface_pdf.generate(), ray.time());
-        const pdf_value = surface_pdf.value(scattered.direction());
+        const sampling_pdf: Pdf = if (lights) |light_obj|
+            .{ .hittable = HittablePdf.init(light_obj, record.point) }
+        else
+            .{ .cosine = CosinePdf.init(record.normal) };
+
+        scattered = Ray.initTimed(record.point, sampling_pdf.generate(), ray.time());
+        const pdf_value = sampling_pdf.value(scattered.direction());
 
         const scattering_pdf = record.material.scatteringPdf(ray, record, scattered);
 
-        const incoming = self.rayColor(scattered, depth - 1, world);
+        const incoming = self.rayColor(scattered, depth - 1, world, lights);
         const color_from_scatter = color_mod.hadamard(attenuation, incoming).scale(scattering_pdf / pdf_value);
         return color_from_emission.add(color_from_scatter);
     }

@@ -5,6 +5,7 @@ const HitRecord = @import("hittable.zig").HitRecord;
 const Interval = @import("interval.zig").Interval;
 const Material = @import("material.zig").Material;
 const Aabb = @import("aabb.zig").Aabb;
+const random = @import("random.zig");
 
 pub const Quad = struct {
     Q: Vec3,
@@ -15,6 +16,7 @@ pub const Quad = struct {
     normal: Vec3,
     D: f32,
     w: Vec3,
+    area: f32,
 
     pub fn init(Q: Vec3, u: Vec3, v: Vec3, material: Material) Quad {
         const n = u.cross(v);
@@ -28,7 +30,21 @@ pub const Quad = struct {
             .normal = normal,
             .D = normal.dot(Q),
             .w = n.scale(1.0 / n.dot(n)),
+            .area = n.length(),
         };
+    }
+
+    pub fn pdfValue(self: Quad, origin: Vec3, direction: Vec3) f32 {
+        var record: HitRecord = undefined;
+        if (!self.hit(Ray.init(origin, direction), Interval.init(0.001, std.math.inf(f32)), &record)) return 0;
+        const dist_squared = record.hit_t * record.hit_t * direction.dot(direction);
+        const cosine = @abs(direction.dot(record.normal) / direction.length());
+        return dist_squared / (cosine * self.area);
+    }
+
+    pub fn randomToward(self: Quad, origin: Vec3) Vec3 {
+        const sample_pt = self.Q.add(self.u.scale(random.float())).add(self.v.scale(random.float()));
+        return sample_pt.sub(origin);
     }
 
     fn computeBoundingBox(Q: Vec3, u: Vec3, v: Vec3) Aabb {
