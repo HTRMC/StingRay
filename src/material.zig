@@ -5,6 +5,7 @@ const Color = color_mod.Color;
 const Vec3 = color_mod.Vec3;
 const HitRecord = @import("hittable.zig").HitRecord;
 const random = @import("random.zig");
+const Texture = @import("texture.zig").Texture;
 
 fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) Vec3 {
     const cos_theta = @min(uv.scale(-1.0).dot(n), 1.0);
@@ -14,7 +15,15 @@ fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) Vec3 {
 }
 
 pub const Lambertian = struct {
-    albedo: Color,
+    tex: Texture,
+
+    pub fn fromColor(albedo: Color) Lambertian {
+        return .{ .tex = Texture.fromColor(albedo) };
+    }
+
+    pub fn fromTexture(tex: Texture) Lambertian {
+        return .{ .tex = tex };
+    }
 
     pub fn scatter(
         self: Lambertian,
@@ -26,7 +35,7 @@ pub const Lambertian = struct {
         var direction = record.normal.add(random.unitVector());
         if (color_mod.nearZero(direction)) direction = record.normal;
         scattered.* = Ray.initTimed(record.point, direction, ray_in.time());
-        attenuation.* = self.albedo;
+        attenuation.* = self.tex.value(record.u, record.v, record.point);
         return true;
     }
 };

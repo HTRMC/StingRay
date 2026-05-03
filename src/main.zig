@@ -22,7 +22,7 @@ pub fn main(init: std.process.Init) !void {
     var world = HittableList.init(std.heap.page_allocator);
     defer world.deinit();
 
-    const ground_material: Material = .{ .lambertian = .{ .albedo = Color.init(0.5, 0.5, 0.5) } };
+    const ground_material: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.5, 0.5, 0.5)) };
     try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -1000, 0), 1000, ground_material) });
 
     var a: i32 = -11;
@@ -38,7 +38,7 @@ pub fn main(init: std.process.Init) !void {
 
             if (choose_mat < 0.8) {
                 const albedo = color_mod.hadamard(random.vec(), random.vec());
-                const sphere_material: Material = .{ .lambertian = .{ .albedo = albedo } };
+                const sphere_material: Material = .{ .lambertian = material_mod.Lambertian.fromColor(albedo) };
                 const center2 = center.add(Vec3.init(0, random.floatRange(0, 0.5), 0));
                 try world.add(.{ .sphere = Sphere.initMoving(center, center2, 0.2, sphere_material) });
             } else if (choose_mat < 0.95) {
@@ -56,7 +56,7 @@ pub fn main(init: std.process.Init) !void {
     const material1: Material = .{ .dielectric = .{ .refraction_index = 1.5 } };
     try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 1, 0), 1.0, material1) });
 
-    const material2: Material = .{ .lambertian = .{ .albedo = Color.init(0.4, 0.2, 0.1) } };
+    const material2: Material = .{ .lambertian = material_mod.Lambertian.fromColor(Color.init(0.4, 0.2, 0.1)) };
     try world.add(.{ .sphere = Sphere.init(Vec3.init(-4, 1, 0), 1.0, material2) });
 
     const material3: Material = .{ .metal = Metal.init(Color.init(0.7, 0.6, 0.5), 0.0) };
