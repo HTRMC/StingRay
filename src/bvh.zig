@@ -68,18 +68,6 @@ pub const BvhNode = struct {
         return a_int.min < b_int.min;
     }
 
-    fn boxXCompare(_: void, a: Hittable, b: Hittable) bool {
-        return boxCompare(0, a, b);
-    }
-
-    fn boxYCompare(_: void, a: Hittable, b: Hittable) bool {
-        return boxCompare(1, a, b);
-    }
-
-    fn boxZCompare(_: void, a: Hittable, b: Hittable) bool {
-        return boxCompare(2, a, b);
-    }
-
     pub fn hit(self: *const BvhNode, ray: Ray, ray_t: Interval, record: *HitRecord) bool {
         if (!self.bbox.hit(ray, ray_t)) return false;
 

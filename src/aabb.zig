@@ -49,7 +49,7 @@ pub const Aabb = struct {
     }
 
     fn padToMinimums(self: *Aabb) void {
-        const delta: f32 = 0.0001;
+        const delta: f32 = 0.01;
         if (self.x.size() < delta) self.x = self.x.expand(delta);
         if (self.y.size() < delta) self.y = self.y.expand(delta);
         if (self.z.size() < delta) self.z = self.z.expand(delta);

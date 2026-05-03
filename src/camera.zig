@@ -14,7 +14,6 @@ const pdf_mod = @import("pdf.zig");
 const Pdf = pdf_mod.Pdf;
 const CosinePdf = pdf_mod.CosinePdf;
 const HittablePdf = pdf_mod.HittablePdf;
-const MixturePdf = pdf_mod.MixturePdf;
 
 pub const Camera = struct {
     aspect_ratio: f32 = 1.0,
@@ -155,19 +154,20 @@ pub const Camera = struct {
             return color_mod.hadamard(srec.attenuation, self.rayColor(srec.skip_pdf_ray, depth - 1, world, lights));
         }
 
-        var scattered: Ray = undefined;
         const cosine_pdf = srec.pdf;
-        var light_pdf: Pdf = undefined;
-        const sampling_pdf: Pdf = if (lights) |light_obj| blk: {
-            light_pdf = .{ .hittable = HittablePdf.init(light_obj, record.point) };
-            break :blk .{ .mixture = MixturePdf.init(&light_pdf, &cosine_pdf) };
-        } else cosine_pdf;
+        var pdf_value: f32 = 0;
+        var direction: Vec3 = undefined;
+        if (lights) |light_obj| {
+            const light_pdf: Pdf = .{ .hittable = HittablePdf.init(light_obj, record.point) };
+            direction = if (random.float() < 0.5) light_pdf.generate() else cosine_pdf.generate();
+            pdf_value = 0.5 * light_pdf.value(direction) + 0.5 * cosine_pdf.value(direction);
+        } else {
+            direction = cosine_pdf.generate();
+            pdf_value = cosine_pdf.value(direction);
+        }
 
-        scattered = Ray.initTimed(record.point, sampling_pdf.generate(), ray.time());
-        const pdf_value = sampling_pdf.value(scattered.direction());
-
+        const scattered = Ray.initTimed(record.point, direction, ray.time());
         const scattering_pdf = record.material.scatteringPdf(ray, record, scattered);
-
         const incoming = self.rayColor(scattered, depth - 1, world, lights);
         const color_from_scatter = color_mod.hadamard(srec.attenuation, incoming).scale(scattering_pdf / pdf_value);
         return color_from_emission.add(color_from_scatter);
