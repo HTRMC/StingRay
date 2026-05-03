@@ -35,16 +35,20 @@ pub fn main(init: std.process.Init) !void {
 
             if (center.sub(Vec3.init(4, 0.2, 0)).length() <= 0.9) continue;
 
-            const sphere_material: Material = if (choose_mat < 0.8) blk: {
+            if (choose_mat < 0.8) {
                 const albedo = color_mod.hadamard(random.vec(), random.vec());
-                break :blk .{ .lambertian = .{ .albedo = albedo } };
-            } else if (choose_mat < 0.95) blk: {
+                const sphere_material: Material = .{ .lambertian = .{ .albedo = albedo } };
+                const center2 = center.add(Vec3.init(0, random.floatRange(0, 0.5), 0));
+                try world.add(.{ .sphere = Sphere.initMoving(center, center2, 0.2, sphere_material) });
+            } else if (choose_mat < 0.95) {
                 const albedo = random.vecRange(0.5, 1);
                 const fuzz = random.floatRange(0, 0.5);
-                break :blk .{ .metal = Metal.init(albedo, fuzz) };
-            } else .{ .dielectric = .{ .refraction_index = 1.5 } };
-
-            try world.add(.{ .sphere = Sphere.init(center, 0.2, sphere_material) });
+                const sphere_material: Material = .{ .metal = Metal.init(albedo, fuzz) };
+                try world.add(.{ .sphere = Sphere.init(center, 0.2, sphere_material) });
+            } else {
+                const sphere_material: Material = .{ .dielectric = .{ .refraction_index = 1.5 } };
+                try world.add(.{ .sphere = Sphere.init(center, 0.2, sphere_material) });
+            }
         }
     }
 
