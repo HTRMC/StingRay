@@ -80,8 +80,8 @@ pub const NoiseTexture = struct {
     pub fn value(self: NoiseTexture, u: f32, v: f32, p: Vec3) Color {
         _ = u;
         _ = v;
-        _ = self.scale;
-        return Color.init(1, 1, 1).scale(self.noise.turb(p, 7));
+        const phase = self.scale * p.z + 10.0 * self.noise.turb(p, 7);
+        return Color.init(0.5, 0.5, 0.5).scale(1.0 + @sin(phase));
     }
 };
 
