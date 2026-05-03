@@ -10,6 +10,8 @@ pub const HitRecord = struct {
     point: Vec3,
     normal: Vec3,
     hit_t: f32,
+    u: f32 = 0,
+    v: f32 = 0,
     front_face: bool,
     material: Material = .none,
 
