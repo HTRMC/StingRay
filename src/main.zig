@@ -20,8 +20,8 @@ const Image = @import("image.zig").Image;
 const Perlin = @import("perlin.zig").Perlin;
 const random = @import("random.zig");
 
-const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads };
-const selected_scene: Scene = .quads;
+const Scene = enum { bouncing_spheres, checkered_spheres, earth, perlin_spheres, quads, simple_light };
+const selected_scene: Scene = .simple_light;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -36,7 +36,39 @@ pub fn main(init: std.process.Init) !void {
         .earth => try earth(stdout, stderr),
         .perlin_spheres => try perlinSpheres(stdout, stderr),
         .quads => try quads(stdout, stderr),
+        .simple_light => try simpleLight(stdout, stderr),
     }
+}
+
+fn simpleLight(stdout: anytype, stderr: anytype) !void {
+    const allocator = std.heap.page_allocator;
+    var world = HittableList.init(allocator);
+    defer world.deinit();
+
+    const perlin_noise = try allocator.create(Perlin);
+    perlin_noise.* = Perlin.init();
+    const noise_tex: Texture = .{ .noise = NoiseTexture.init(perlin_noise, 4) };
+    const noise_material: Material = .{ .lambertian = material_mod.Lambertian.fromTexture(noise_tex) };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, -1000, 0), 1000, noise_material) });
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 2, 0), 2, noise_material) });
+
+    const difflight: Material = .{ .diffuse_light = material_mod.DiffuseLight.fromColor(Color.init(4, 4, 4)) };
+    try world.add(.{ .sphere = Sphere.init(Vec3.init(0, 7, 0), 2, difflight) });
+    try world.add(.{ .quad = Quad.init(Vec3.init(3, 1, -2), Vec3.init(2, 0, 0), Vec3.init(0, 2, 0), difflight) });
+
+    var cam: Camera = .{};
+    cam.aspect_ratio = 16.0 / 9.0;
+    cam.image_width = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth = 50;
+    cam.background = Color.init(0, 0, 0);
+    cam.vfov = 20;
+    cam.lookfrom = Vec3.init(26, 3, 6);
+    cam.lookat = Vec3.init(0, 2, 0);
+    cam.vup = Vec3.init(0, 1, 0);
+    cam.defocus_angle = 0;
+
+    try cam.render(world, stdout, stderr);
 }
 
 fn quads(stdout: anytype, stderr: anytype) !void {
