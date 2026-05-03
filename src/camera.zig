@@ -8,6 +8,9 @@ const HitRecord = @import("hittable.zig").HitRecord;
 const HittableList = @import("hittable_list.zig").HittableList;
 const Interval = @import("interval.zig").Interval;
 const random = @import("random.zig");
+const pdf_mod = @import("pdf.zig");
+const Pdf = pdf_mod.Pdf;
+const CosinePdf = pdf_mod.CosinePdf;
 
 pub const Camera = struct {
     aspect_ratio: f32 = 1.0,
@@ -141,23 +144,9 @@ pub const Camera = struct {
             return color_from_emission;
         }
 
-        const on_light = Vec3.init(
-            random.floatRange(213, 343),
-            554,
-            random.floatRange(227, 332),
-        );
-        const to_light_raw = on_light.sub(record.point);
-        const distance_squared = to_light_raw.dot(to_light_raw);
-        const to_light = to_light_raw.normalize();
-
-        if (to_light.dot(record.normal) < 0) return color_from_emission;
-
-        const light_area: f32 = (343 - 213) * (332 - 227);
-        const light_cosine = @abs(to_light.y);
-        if (light_cosine < 0.000001) return color_from_emission;
-
-        const pdf_value = distance_squared / (light_cosine * light_area);
-        scattered = Ray.initTimed(record.point, to_light, ray.time());
+        const surface_pdf: Pdf = .{ .cosine = CosinePdf.init(record.normal) };
+        scattered = Ray.initTimed(record.point, surface_pdf.generate(), ray.time());
+        const pdf_value = surface_pdf.value(scattered.direction());
 
         const scattering_pdf = record.material.scatteringPdf(ray, record, scattered);
 
