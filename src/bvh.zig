@@ -6,7 +6,6 @@ const hittable_mod = @import("hittable.zig");
 const Hittable = hittable_mod.Hittable;
 const HitRecord = hittable_mod.HitRecord;
 const HittableList = @import("hittable_list.zig").HittableList;
-const random = @import("random.zig");
 
 pub const BvhNode = struct {
     left: *Hittable,
@@ -24,7 +23,14 @@ pub const BvhNode = struct {
         end: usize,
     ) !*BvhNode {
         const node = try allocator.create(BvhNode);
-        const axis: u8 = @intCast(random.intRange(0, 2));
+
+        var bbox = Aabb.empty;
+        var i: usize = start;
+        while (i < end) : (i += 1) {
+            bbox = Aabb.fromBoxes(bbox, objects[i].boundingBox());
+        }
+
+        const axis: u8 = bbox.longestAxis();
         const span = end - start;
 
         if (span == 1) {
@@ -52,7 +58,7 @@ pub const BvhNode = struct {
             node.right = right_h;
         }
 
-        node.bbox = Aabb.fromBoxes(node.left.boundingBox(), node.right.boundingBox());
+        node.bbox = bbox;
         return node;
     }
 

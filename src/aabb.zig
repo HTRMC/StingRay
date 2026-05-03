@@ -44,6 +44,17 @@ pub const Aabb = struct {
         };
     }
 
+    pub fn longestAxis(self: Aabb) u8 {
+        const xs = self.x.size();
+        const ys = self.y.size();
+        const zs = self.z.size();
+        if (xs > ys) return if (xs > zs) 0 else 2;
+        return if (ys > zs) 1 else 2;
+    }
+
+    pub const empty: Aabb = .{ .x = Interval.empty, .y = Interval.empty, .z = Interval.empty };
+    pub const universe: Aabb = .{ .x = Interval.universe, .y = Interval.universe, .z = Interval.universe };
+
     pub fn hit(self: Aabb, ray: Ray, ray_t_in: Interval) bool {
         var ray_t = ray_t_in;
         var axis: u8 = 0;
