@@ -135,7 +135,7 @@ pub const Camera = struct {
 
         var scattered: Ray = undefined;
         var attenuation: Color = undefined;
-        const color_from_emission = record.material.emitted(record.u, record.v, record.point);
+        const color_from_emission = record.material.emitted(record, record.u, record.v, record.point);
 
         if (!record.material.scatter(ray, record, &attenuation, &scattered)) {
             return color_from_emission;

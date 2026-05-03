@@ -129,7 +129,8 @@ pub const DiffuseLight = struct {
         return false;
     }
 
-    pub fn emitted(self: DiffuseLight, u: f32, v: f32, p: Vec3) Color {
+    pub fn emitted(self: DiffuseLight, record: HitRecord, u: f32, v: f32, p: Vec3) Color {
+        if (!record.front_face) return Color.init(0, 0, 0);
         return self.tex.value(u, v, p);
     }
 };
@@ -179,9 +180,9 @@ pub const Material = union(enum) {
         };
     }
 
-    pub fn emitted(self: Material, u: f32, v: f32, p: Vec3) Color {
+    pub fn emitted(self: Material, record: HitRecord, u: f32, v: f32, p: Vec3) Color {
         return switch (self) {
-            .diffuse_light => |light| light.emitted(u, v, p),
+            .diffuse_light => |light| light.emitted(record, u, v, p),
             else => Color.init(0, 0, 0),
         };
     }
