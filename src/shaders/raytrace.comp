@@ -1,0 +1,355 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, rgba32f) uniform image2D accum_image;
+layout(set = 0, binding = 5, rgba8)   uniform writeonly image2D display_image;
+
+layout(set = 0, binding = 1) uniform Camera {
+    vec4 lookfrom;
+    vec4 lookat_vfov;
+    vec4 vup_aspect;
+    uvec4 frame_size;
+    uvec4 counts;       // x sphere, y quad, z mat, w accum_index
+    uvec4 extra;        // x light_count
+} cam;
+
+struct Sphere {
+    vec4 center_radius;
+    uvec4 mat_idx;
+};
+struct Quad {
+    vec4 q;
+    vec4 u;
+    vec4 v;
+    vec4 n_d;
+    vec4 w_vec;
+    uvec4 mat_pad;
+};
+struct Material {
+    vec4 albedo;
+    uvec4 type_pad;
+};
+
+layout(set = 0, binding = 2) readonly buffer Spheres { Sphere spheres[]; };
+layout(set = 0, binding = 3) readonly buffer Quads { Quad quads[]; };
+layout(set = 0, binding = 4) readonly buffer Materials { Material materials[]; };
+layout(set = 0, binding = 6) readonly buffer Lights { Quad lights[]; };
+
+struct BvhNode {
+    vec3 aabb_min;
+    uint left_or_first;
+    vec3 aabb_max;
+    uint right_or_count; // high bit: 1=leaf with prim_count in low 31, 0=inner with right_idx
+};
+
+layout(set = 0, binding = 7) readonly buffer BvhBuf { BvhNode bvh[]; };
+layout(set = 0, binding = 8) readonly buffer Refs { uint prim_refs[]; };
+
+const float T_MIN = 0.001;
+const float T_MAX = 1e30;
+const int MAX_DEPTH = 8;
+const float PI = 3.14159265359;
+
+uint pcg(inout uint v) {
+    v = v * 747796405u + 2891336453u;
+    uint w = ((v >> ((v >> 28u) + 4u)) ^ v) * 277803737u;
+    return (w >> 22u) ^ w;
+}
+float rand01(inout uint seed) { return float(pcg(seed)) * (1.0 / 4294967296.0); }
+vec2 rand2(inout uint seed) { return vec2(rand01(seed), rand01(seed)); }
+
+vec3 rand_in_unit_sphere(inout uint seed) {
+    for (int i = 0; i < 16; ++i) {
+        vec3 p = 2.0 * vec3(rand01(seed), rand01(seed), rand01(seed)) - 1.0;
+        if (dot(p, p) < 1.0) return p;
+    }
+    return vec3(0.0);
+}
+
+void build_onb(vec3 n, out vec3 t, out vec3 b) {
+    float s = (n.z >= 0.0) ? 1.0 : -1.0;
+    float a = -1.0 / (s + n.z);
+    float c = n.x * n.y * a;
+    t = vec3(1.0 + s * n.x * n.x * a, s * c, -s * n.x);
+    b = vec3(c, s + n.y * n.y * a, -n.y);
+}
+
+vec3 cosine_dir(vec3 n, inout uint seed) {
+    vec2 r = rand2(seed);
+    float phi = 2.0 * PI * r.x;
+    float r2 = r.y;
+    float r2s = sqrt(r2);
+    vec3 t, b;
+    build_onb(n, t, b);
+    return normalize(t * (cos(phi) * r2s) + b * (sin(phi) * r2s) + n * sqrt(1.0 - r2));
+}
+
+struct Hit {
+    float t;
+    vec3 p;
+    vec3 n;
+    bool front;
+    uint mat_idx;
+};
+
+bool hit_sphere(Sphere s, vec3 ro, vec3 rd, float t_min, float t_max, inout Hit h) {
+    vec3 c = s.center_radius.xyz;
+    float r = s.center_radius.w;
+    vec3 oc = c - ro;
+    float a = dot(rd, rd);
+    float hf = dot(rd, oc);
+    float disc = hf * hf - a * (dot(oc, oc) - r * r);
+    if (disc < 0.0) return false;
+    float sq = sqrt(disc);
+    float t = (hf - sq) / a;
+    if (t < t_min || t > t_max) {
+        t = (hf + sq) / a;
+        if (t < t_min || t > t_max) return false;
+    }
+    h.t = t;
+    h.p = ro + rd * t;
+    vec3 outward = (h.p - c) / r;
+    h.front = dot(rd, outward) < 0.0;
+    h.n = h.front ? outward : -outward;
+    h.mat_idx = s.mat_idx.x;
+    return true;
+}
+
+bool hit_quad(Quad q, vec3 ro, vec3 rd, float t_min, float t_max, inout Hit h) {
+    vec3 n = q.n_d.xyz;
+    float D = q.n_d.w;
+    float denom = dot(n, rd);
+    if (abs(denom) < 1e-8) return false;
+    float t = (D - dot(n, ro)) / denom;
+    if (t < t_min || t > t_max) return false;
+    vec3 p = ro + rd * t;
+    vec3 ph = p - q.q.xyz;
+    vec3 w = q.w_vec.xyz;
+    float alpha = dot(w, cross(ph, q.v.xyz));
+    float beta  = dot(w, cross(q.u.xyz, ph));
+    if (alpha < 0.0 || alpha > 1.0 || beta < 0.0 || beta > 1.0) return false;
+    h.t = t;
+    h.p = p;
+    h.front = denom < 0.0;
+    h.n = h.front ? n : -n;
+    h.mat_idx = q.mat_pad.x;
+    return true;
+}
+
+bool aabb_hit(vec3 bmin, vec3 bmax, vec3 ro, vec3 inv_rd, float t_min, float t_max) {
+    vec3 t0 = (bmin - ro) * inv_rd;
+    vec3 t1 = (bmax - ro) * inv_rd;
+    vec3 tmn = min(t0, t1);
+    vec3 tmx = max(t0, t1);
+    float tn = max(max(tmn.x, tmn.y), max(tmn.z, t_min));
+    float tf = min(min(tmx.x, tmx.y), min(tmx.z, t_max));
+    return tn <= tf;
+}
+
+bool intersect_prim(uint pr, vec3 ro, vec3 rd, float t_min, float t_max, inout Hit h) {
+    bool is_quad = (pr & 0x80000000u) != 0u;
+    uint pi = pr & 0x7FFFFFFFu;
+    if (is_quad) return hit_quad(quads[pi], ro, rd, t_min, t_max, h);
+    return hit_sphere(spheres[pi], ro, rd, t_min, t_max, h);
+}
+
+bool world_hit(vec3 ro, vec3 rd, float t_min, float t_max, out Hit best) {
+    vec3 inv_rd = 1.0 / rd;
+    bool any = false;
+    float closest = t_max;
+    int stack[32];
+    int sp = 0;
+    stack[sp++] = 0;
+    Hit h;
+    while (sp > 0) {
+        int idx = stack[--sp];
+        BvhNode n = bvh[idx];
+        if (!aabb_hit(n.aabb_min, n.aabb_max, ro, inv_rd, t_min, closest)) continue;
+        if ((n.right_or_count & 0x80000000u) != 0u) {
+            uint cnt = n.right_or_count & 0x7FFFFFFFu;
+            uint first = n.left_or_first;
+            for (uint k = 0u; k < cnt; ++k) {
+                if (intersect_prim(prim_refs[first + k], ro, rd, t_min, closest, h)) {
+                    any = true; closest = h.t; best = h;
+                }
+            }
+        } else if (sp < 30) {
+            stack[sp++] = int(n.left_or_first);
+            stack[sp++] = int(n.right_or_count);
+        }
+    }
+    return any;
+}
+
+bool world_occluded(vec3 ro, vec3 rd, float t_max) {
+    vec3 inv_rd = 1.0 / rd;
+    int stack[32];
+    int sp = 0;
+    stack[sp++] = 0;
+    Hit h;
+    while (sp > 0) {
+        int idx = stack[--sp];
+        BvhNode n = bvh[idx];
+        if (!aabb_hit(n.aabb_min, n.aabb_max, ro, inv_rd, T_MIN, t_max)) continue;
+        if ((n.right_or_count & 0x80000000u) != 0u) {
+            uint cnt = n.right_or_count & 0x7FFFFFFFu;
+            uint first = n.left_or_first;
+            for (uint k = 0u; k < cnt; ++k) {
+                if (intersect_prim(prim_refs[first + k], ro, rd, T_MIN, t_max, h)) return true;
+            }
+        } else if (sp < 30) {
+            stack[sp++] = int(n.left_or_first);
+            stack[sp++] = int(n.right_or_count);
+        }
+    }
+    return false;
+}
+
+float schlick(float cosine, float ref_idx) {
+    float r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+    r0 = r0 * r0;
+    return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
+}
+
+// Sample point on random light quad. Returns false if sampling failed (no lights).
+// On success, fills wi (toward light), dist, Le, light_pdf (in solid-angle measure).
+bool sample_light(vec3 hit_p, inout uint seed, out vec3 wi, out float dist, out vec3 Le, out float light_pdf) {
+    uint nl = cam.extra.x;
+    if (nl == 0u) return false;
+    uint li = uint(rand01(seed) * float(nl));
+    if (li >= nl) li = nl - 1u;
+    Quad lq = lights[li];
+    vec2 r = rand2(seed);
+    vec3 lp = lq.q.xyz + r.x * lq.u.xyz + r.y * lq.v.xyz;
+    vec3 d = lp - hit_p;
+    dist = length(d);
+    wi = d / dist;
+    vec3 ln = lq.n_d.xyz;
+    float cos_l = dot(-wi, ln);
+    if (cos_l <= 0.0) return false;
+    vec3 cu = cross(lq.u.xyz, lq.v.xyz);
+    float area = length(cu);
+    light_pdf = (dist * dist) / (cos_l * area * float(nl));
+    Le = materials[lq.mat_pad.x].albedo.xyz;
+    return true;
+}
+
+vec3 ray_color(vec3 ro_init, vec3 rd_init, inout uint seed) {
+    vec3 throughput = vec3(1.0);
+    vec3 radiance = vec3(0.0);
+    vec3 ro = ro_init;
+    vec3 rd = rd_init;
+    bool include_emit = true; // include emissive on first hit + after specular bounces
+
+    for (int i = 0; i < MAX_DEPTH; ++i) {
+        Hit h;
+        if (!world_hit(ro, rd, T_MIN, T_MAX, h)) break;
+        Material m = materials[h.mat_idx];
+        uint mt = m.type_pad.x;
+
+        if (mt == 3u) {
+            if (include_emit) radiance += throughput * m.albedo.xyz;
+            break;
+        }
+
+        if (mt == 0u) {
+            // Lambertian: NEE direct light
+            vec3 wi; float ldist; vec3 Le; float lpdf;
+            if (sample_light(h.p, seed, wi, ldist, Le, lpdf) && lpdf > 0.0) {
+                float cos_s = dot(wi, h.n);
+                if (cos_s > 0.0) {
+                    if (!world_occluded(h.p + h.n * 1e-3, wi, ldist - 1e-3)) {
+                        vec3 brdf = m.albedo.xyz / PI;
+                        radiance += throughput * brdf * Le * (cos_s / lpdf);
+                    }
+                }
+            }
+            // Indirect: cosine-weighted scatter (don't double-count emission next bounce)
+            vec3 new_dir = cosine_dir(h.n, seed);
+            throughput *= m.albedo.xyz;
+            ro = h.p;
+            rd = new_dir;
+            include_emit = false;
+        } else if (mt == 1u) {
+            // Metal: pure specular (or fuzzy)
+            float fuzz = m.albedo.w;
+            vec3 r = reflect(normalize(rd), h.n);
+            vec3 new_dir = normalize(r + fuzz * rand_in_unit_sphere(seed));
+            if (dot(new_dir, h.n) <= 0.0) break;
+            throughput *= m.albedo.xyz;
+            ro = h.p;
+            rd = new_dir;
+            include_emit = true; // specular path can hit light directly
+        } else if (mt == 2u) {
+            // Dielectric
+            float ior = m.albedo.w;
+            float ratio = h.front ? (1.0 / ior) : ior;
+            vec3 ud = normalize(rd);
+            float cos_theta = min(dot(-ud, h.n), 1.0);
+            float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+            bool tir = ratio * sin_theta > 1.0;
+            vec3 new_dir;
+            if (tir || schlick(cos_theta, ratio) > rand01(seed)) {
+                new_dir = reflect(ud, h.n);
+            } else {
+                new_dir = refract(ud, h.n, ratio);
+            }
+            ro = h.p;
+            rd = new_dir;
+            include_emit = true;
+        } else {
+            break;
+        }
+    }
+    return radiance;
+}
+
+vec3 tonemap(vec3 col) {
+    col = col / (col + vec3(1.0));
+    return sqrt(col); // gamma 2.0
+}
+
+void main() {
+    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(accum_image);
+    if (pix.x >= size.x || pix.y >= size.y) return;
+
+    uint seed = uint(pix.x) * 1973u + uint(pix.y) * 9277u + cam.frame_size.z * 26699u;
+    seed = pcg(seed);
+
+    vec3 lookfrom = cam.lookfrom.xyz;
+    vec3 lookat   = cam.lookat_vfov.xyz;
+    float vfov    = cam.lookat_vfov.w;
+    vec3 vup      = cam.vup_aspect.xyz;
+    float aspect  = cam.vup_aspect.w;
+
+    vec3 w = normalize(lookfrom - lookat);
+    vec3 u = normalize(cross(vup, w));
+    vec3 v = cross(w, u);
+
+    float vp_h = 2.0 * tan(vfov * 0.5);
+    float vp_w = vp_h * aspect;
+
+    vec2 jitter = rand2(seed) - 0.5;
+    vec2 ss  = (vec2(pix) + 0.5 + jitter) / vec2(size);
+    vec2 ndc = vec2(ss.x - 0.5, 0.5 - ss.y);
+    vec3 dir = normalize(-w + u * (ndc.x * vp_w) + v * (ndc.y * vp_h));
+
+    vec3 sample_radiance = ray_color(lookfrom, dir, seed);
+    if (any(isnan(sample_radiance))) sample_radiance = vec3(0.0);
+    sample_radiance = clamp(sample_radiance, vec3(0.0), vec3(20.0)); // firefly clamp
+
+    uint accum_idx = cam.counts.w;
+    vec3 avg;
+    if (accum_idx == 0u) {
+        avg = sample_radiance;
+    } else {
+        vec3 prev = imageLoad(accum_image, pix).xyz;
+        avg = (prev * float(accum_idx) + sample_radiance) / float(accum_idx + 1u);
+    }
+    imageStore(accum_image, pix, vec4(avg, 1.0));
+
+    vec3 display = tonemap(avg);
+    imageStore(display_image, pix, vec4(display, 1.0));
+}
