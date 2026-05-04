@@ -3,11 +3,7 @@
     .version = "0.0.0",
     .fingerprint = 0x33a3eed07815d362,
     .minimum_zig_version = "0.16.0",
-    .dependencies = .{
-        .zlm = .{
-            .path = "zig-pkg/zlm-0.3.0-kTeHg2trAQD2piveSS7-m31iH9BSoZ-C1T6b0Xp33Eyp",
-        },
-    },
+    .dependencies = .{},
     .paths = .{
         "build.zig",
         "build.zig.zon",
